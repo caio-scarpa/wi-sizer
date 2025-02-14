@@ -1,57 +1,31 @@
 # Meraki Wi-Sizer Tool
 
 ## Overview
-The **Meraki Wi-Sizer Tool** is a web application built with **Streamlit** to estimate the number of Meraki Access Points (APs) needed for a given indoor office environment. The tool provides a preliminary wireless sizing estimation based on area, user count, and predefined scenarios, helping users make informed decisions about Meraki wireless solutions.
+The Meraki Wi-Sizer Tool is a web-based application built with Streamlit to **estimate the required number of Meraki Access Points (APs) for a given indoor office environment**. This tool provides a preliminary wireless sizing estimation based on area, user density, and predefined scenarios, helping users make data-driven decisions about their Meraki wireless deployments.
 
 ## Features
-- **Scenario-based AP estimation:** Select from predefined office environments to calculate the required number of APs.
-- **Wi-Fi Generation Selection:** Choose between **Wi-Fi 6, Wi-Fi 6E, and Wi-Fi 7** for accurate model recommendations.
-- **Access Point Model Selection:** Determines the best AP model based on user density and bandwidth needs.
-- **PoE Switch Integration:** Option to include **PoE switch recommendations** based on AP power and bandwidth requirements.
-- **Detailed AP & Switch Specifications:** Retrieves relevant AP and switch details from separate JSON data files.
+- **Scenario-Based AP Estimation** – Choose from predefined office layouts to determine the number of APs required.
+- **Wi-Fi Generation Selection** – Supports Wi-Fi 6, Wi-Fi 6E, and Wi-Fi 7 for accurate model recommendations.
+- **AP Model Recommendations** – Suggests the best Meraki AP model based on user density and bandwidth needs.
+- **PoE Switch Integration** – Optionally recommends PoE switches to power APs based on power and bandwidth requirements.
+- **Detailed AP & Switch Specifications** – Retrieves relevant device details from structured JSON-based data files.
+- **Streamlit Web UI** – Simple and interactive interface for seamless wireless network sizing.
 
 ## Technologies Used
 - **Python 3**
 - **Streamlit** (for the UI)
 - **Pandas** (for data handling)
-- **JSON** (for storing AP and switch model details)
+- **JSON** (for storing details)
 
-## Installation
-### Prerequisites
-Make sure you have the following installed:
-- **Python 3.8+**
-- **pip** (Python package manager)
-
-### Setup Instructions
-1. **Clone the repository:**
-   ```sh
-   git clone https://github.com/yourusername/meraki-wi-sizer.git
-   cd meraki-wi-sizer
-   ```
-2. **Create a virtual environment (optional but recommended):**
-   ```sh
-   python -m venv venv
-   source venv/bin/activate  # On Windows use: venv\Scripts\activate
-   ```
-3. **Install dependencies:**
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-## Usage
-1. **Run the application:**
-   ```sh
-   streamlit run wi-sizer.py
-   ```
-2. Open the provided **localhost link** in your browser.
-3. Select the relevant input parameters:
+## How to Use
+1. Select the relevant input parameters:
    - Number of users
    - Estimated area (m²)
    - Ceiling height (m)
    - Scenario selection (Office 1, Office 2, Office 3, Auditorium)
    - Wi-Fi generation (Wi-Fi 6, Wi-Fi 6E, Wi-Fi 7)
    - Option to include PoE switches
-4. Click **Calculate** to get AP and switch recommendations.
+2. Click **Calculate** to get AP and switch recommendations.
 
 ## Project Structure
 ```
