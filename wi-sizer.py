@@ -3,9 +3,9 @@ import math
 from PIL import Image
 
 # Import the modules with scenarios, AP model, and switch model
-from scenarios import SCENARIOS, get_scenario
-from ap_models import AP_MODELS
-from switch_models import SWITCH_MODELS
+from data.scenarios import SCENARIOS, get_scenario
+from data.ap_models import AP_MODELS
+from data.switch_models import SWITCH_MODELS
 
 # Function to calculate the number of APs and recommended model
 def calculate_aps(area: float, users: int, scenario_type: str, ceiling_height: float = 3.0):
