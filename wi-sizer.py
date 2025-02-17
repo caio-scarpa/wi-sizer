@@ -15,7 +15,7 @@ GLOBAL_TEXT_COLOR = "#27AE60"       # Green color
 BUTTON_BG_COLOR = "#27AE60"         # Button color
 
 # ---------------------------
-# Page Layout & Custom CSS
+# Page Layout & Container Width
 # ---------------------------
 st.set_page_config(
     page_title="Meraki Wi-Sizer Tool",
@@ -23,7 +23,7 @@ st.set_page_config(
     layout="wide"  # Use the full browser width
 )
 
-# Custom CSS to expand container, style buttons, and reduce vertical spacing for the logo, title, and subtitle.
+# Override container and button styling for wider layout and green buttons
 st.markdown(
     """
     <style>
@@ -54,15 +54,6 @@ st.markdown(
     /* Remove rounding from Meraki logo */
     img[src*="meraki_logo.png"] {
         border-radius: 0 !important;
-    }
-    /* Reduce margins for the main title and subtitle */
-    h1 {
-        margin-top: 10px !important;
-        margin-bottom: 5px !important;
-    }
-    h2, h3, p {
-        margin-top: 5px !important;
-        margin-bottom: 5px !important;
     }
     </style>
     """,
@@ -126,7 +117,7 @@ def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: 
         ap_model = "MR28"  # Fallback
 
     ap_info = AP_MODELS[wifi_generation][ap_model].copy()
-    ap_info["Environment"] = "Indoor"  # This field is replaced in the table with Antenna Type
+    ap_info["Environment"] = "Indoor"  # This field will be replaced in the table
     users_per_ap = math.ceil(users / recommended_aps)
     bandwidth_per_ap = round(total_bandwidth / recommended_aps, 0)
     data_wire = math.ceil(bandwidth_per_ap * 1.5)
@@ -250,7 +241,7 @@ def render_ap_details(ap_info: dict, ap_model: str):
     # Determine number of ports (default to 1)
     ports = ap_info.get("Ports", 1)
     
-    # Build a string for port speed as a single line (always include the port count)
+    # Build a string for port speeds as a single line (always include the port count)
     port_speed_list = [str(speed) for speed in ap_info.get('Port Speed', []) if isinstance(speed, (int, float))]
     speeds_str = "/".join(port_speed_list)
     port_speeds_text = f"{ports} x {speeds_str} Gbps" if speeds_str else "N/A"
@@ -403,8 +394,8 @@ def render_bom(recommended_aps, ap_info, switch_option, switches_needed):
 # Main Application
 # ---------------------------
 def main():
-    # Display the Meraki logo at the top with reduced margin
-    st.markdown('<img src="images/meraki_logo.png" style="width:150px; margin-bottom: 5px;">', unsafe_allow_html=True)
+    # Display the Meraki logo in the sidebar so it's always visible
+    st.sidebar.image("images/meraki_logo.png", width=150)
     
     st.title("Meraki Wi-Sizer Tool")
     st.write("Estimate the number of Access Points (APs) and PoE Switches needed for your Meraki wireless network in an indoor office environment.")
