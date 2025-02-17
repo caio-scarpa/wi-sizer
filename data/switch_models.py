@@ -79,7 +79,7 @@ SWITCH_MODELS = {
         }
     },
     "Cisco Catalyst C9300L-M": {
-        "C9300L-24P-4X-M": {
+        "C9300L-24P-4X": {
             "Type": "L3",
             "Access Ports": 24,
             "Port Speed (Gbps)": [1],
@@ -92,7 +92,7 @@ SWITCH_MODELS = {
             "Datasheet": "https://documentation.meraki.com/MS/MS_Overview_and_Specifications/Catalyst_9300L-M_Datasheet",
             "Installation Guide": "https://documentation.meraki.com/MS/MS_Installation_Guides/Catalyst_9300-M_Series_Installation_Guide"
         },
-        "C9300L-24UXG-4X-M": {
+        "C9300L-24UXG-4X": {
             "Type": "L3",
             "Access Ports": 24,
             "Port Speed": [
@@ -108,7 +108,7 @@ SWITCH_MODELS = {
             "Datasheet": "https://documentation.meraki.com/MS/MS_Overview_and_Specifications/Catalyst_9300L-M_Datasheet",
             "Installation Guide": "https://documentation.meraki.com/MS/MS_Installation_Guides/Catalyst_9300-M_Series_Installation_Guide"
         },
-        "C9300L-48P-4X-M": {
+        "C9300L-48P-4X": {
             "Type": "L3",
             "Access Ports": 48,
             "Port Speed (Gbps)": [1],
@@ -121,7 +121,7 @@ SWITCH_MODELS = {
             "Datasheet": "https://documentation.meraki.com/MS/MS_Overview_and_Specifications/Catalyst_9300L-M_Datasheet",
             "Installation Guide": "https://documentation.meraki.com/MS/MS_Installation_Guides/Catalyst_9300-M_Series_Installation_Guide"
         },
-        "C9300L-48PF-4X-M": {
+        "C9300L-48PF-4X": {
             "Type": "L3",
             "Access Ports": 48,
             "Port Speed (Gbps)": [1],
@@ -134,7 +134,7 @@ SWITCH_MODELS = {
             "Datasheet": "https://documentation.meraki.com/MS/MS_Overview_and_Specifications/Catalyst_9300L-M_Datasheet",
             "Installation Guide": "https://documentation.meraki.com/MS/MS_Installation_Guides/Catalyst_9300-M_Series_Installation_Guide"
         },
-        "C9300L-48UXG-4X-M": {
+        "C9300L-48UXG-4X": {
             "Type": "L3",
             "Access Ports": 48,
             "Port Speed": [
