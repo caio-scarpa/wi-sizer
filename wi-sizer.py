@@ -86,6 +86,9 @@ def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: 
     background_devices = 0 if scenario_type == "auditorium" else background_per_user
     devices_5ghz = math.ceil((concurrent_users + background_devices) * 0.7)
     total_bandwidth = math.ceil((concurrent_users * throughput_per_user) + (background_devices * background_sync))
+    # band_5ghz = math.ceil(total_bandwidth * 0.7)
+    # ap_5ghz = ap_capacity_5ghz * 0.175
+    # aps_capacity_5ghz = math.ceil(band_5ghz / ap_5ghz)
 
     ap_capacity = 180 * 0.8  #########################################################
 
