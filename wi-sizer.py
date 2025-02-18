@@ -420,7 +420,7 @@ def main():
             
             # AP Summary
             ap_summary = f"""
-            <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+            <div style="display: flex; justify-content: space-around; margin-top: 10px;">
                 <div style="text-align: center;">
                     <h3 style="color: {GLOBAL_TEXT_COLOR};">🏢 Quantity</h3>
                     <p style="font-size: 24px; font-weight: bold;">{recommended_aps} AP{'s' if recommended_aps != 1 else ''}</p>
