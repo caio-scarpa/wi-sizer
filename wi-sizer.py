@@ -471,8 +471,8 @@ def main():
     st.markdown(
         """
         <hr>
-        <div style="text-align: center; font-size: 0.8rem; color: #555; margin-top: 20px;">
-            Designed by Caio Scarpa | Last Updated 02/06/2025
+        <div style="text-align: center; font-size: 0.8rem; color: #555; margin-top: 20px; margin-bottom: 40px;">
+            Designed by Caio Scarpa | Last Updated 02/18/2025
         </div>
         """,
         unsafe_allow_html=True
