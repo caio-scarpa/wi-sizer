@@ -3,7 +3,9 @@ SWITCH_MODELS = {
         "MS130-8P": {
             "Type": "L2",
             "Access Ports": 8,
-            "Port Speed (Gbps)": [1],
+            "Port Speed": [
+                {"Ports": 8, "Speed (Gbps)": [1]}
+            ],
             "PoE Type": "PoE+",
             "PoE Budget (W)": 120,
             "Uplink Speed (Gbps)": [1],
@@ -82,7 +84,9 @@ SWITCH_MODELS = {
         "C9300L-24P-4X": {
             "Type": "L3",
             "Access Ports": 24,
-            "Port Speed (Gbps)": [1],
+            "Port Speed": [
+                {"Ports": 24, "Speed (Gbps)": [1]}
+            ],
             "PoE Type": "PoE+",
             "PoE Budget (W)": 505,
             "Uplink Speed (Gbps)": [10],
@@ -111,7 +115,9 @@ SWITCH_MODELS = {
         "C9300L-48P-4X": {
             "Type": "L3",
             "Access Ports": 48,
-            "Port Speed (Gbps)": [1],
+            "Port Speed": [
+                {"Ports": 48, "Speed (Gbps)": [1]}
+            ],
             "PoE Type": "PoE+",
             "PoE Budget (W)": 505,
             "Uplink Speed (Gbps)": [10],
@@ -124,7 +130,9 @@ SWITCH_MODELS = {
         "C9300L-48PF-4X": {
             "Type": "L3",
             "Access Ports": 48,
-            "Port Speed (Gbps)": [1],
+            "Port Speed": [
+                {"Ports": 48, "Speed (Gbps)": [1]}
+            ],
             "PoE Type": "PoE+",
             "PoE Budget (W)": 890,
             "Uplink Speed (Gbps)": [10],
