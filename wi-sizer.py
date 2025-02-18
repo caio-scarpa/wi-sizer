@@ -23,7 +23,8 @@ st.set_page_config(
     layout="wide"  # Use the full browser width
 )
 
-# Override container and button styling for wider layout and green buttons
+# Override container and button styling for wider layout, green buttons,
+# and adjust the meraki_logo styling so it is not rounded or clipped.
 st.markdown(
     """
     <style>
@@ -51,9 +52,20 @@ st.markdown(
     a.custom-link:hover {
         text-decoration: underline;
     }
-    /* Remove rounding from Meraki logo */
+    /* Remove rounding and clipping from Meraki logo */
     img[src*="meraki_logo.png"] {
         border-radius: 0 !important;
+        object-fit: contain !important;
+        clip-path: none !important;
+    }
+    /* Reduce vertical margins for title and subtitle */
+    h1 {
+        margin-top: 10px !important;
+        margin-bottom: 5px !important;
+    }
+    h2, h3, p {
+        margin-top: 5px !important;
+        margin-bottom: 5px !important;
     }
     </style>
     """,
@@ -117,7 +129,7 @@ def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: 
         ap_model = "MR28"  # Fallback
 
     ap_info = AP_MODELS[wifi_generation][ap_model].copy()
-    ap_info["Environment"] = "Indoor"  # This field will be replaced in the table
+    ap_info["Environment"] = "Indoor"  # This field will be replaced in the table with Antenna Type
     users_per_ap = math.ceil(users / recommended_aps)
     bandwidth_per_ap = round(total_bandwidth / recommended_aps, 0)
     data_wire = math.ceil(bandwidth_per_ap * 1.5)
@@ -241,7 +253,7 @@ def render_ap_details(ap_info: dict, ap_model: str):
     # Determine number of ports (default to 1)
     ports = ap_info.get("Ports", 1)
     
-    # Build a string for port speeds as a single line (always include the port count)
+    # Build a string for port speed as a single line (always include the port count)
     port_speed_list = [str(speed) for speed in ap_info.get('Port Speed', []) if isinstance(speed, (int, float))]
     speeds_str = "/".join(port_speed_list)
     port_speeds_text = f"{ports} x {speeds_str} Gbps" if speeds_str else "N/A"
@@ -291,7 +303,8 @@ def render_ap_details(ap_info: dict, ap_model: str):
         </a>
     </div>
     """
-    render_result_card(f"Recommended AP Model: {ap_model}", ap_table)
+    # Underline the AP model in the title
+    render_result_card(f"Recommended AP Model: <u>{ap_model}</u>", ap_table)
 
 def render_switch_details(switch_option, switches_needed):
     """
@@ -354,7 +367,8 @@ def render_switch_details(switch_option, switches_needed):
         </a>
     </div>
     """
-    render_result_card(f"Recommended Access Switch: {switch_model}", switch_table)
+    # Underline the switch model in the title
+    render_result_card(f"Recommended Access Switch: <u>{switch_model}</u>", switch_table)
 
 def render_bom(recommended_aps, ap_info, switch_option, switches_needed):
     """

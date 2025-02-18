@@ -6,6 +6,13 @@ While Category-5e cables can support multigigabit data rates upto 2.5/5 Gbps, ex
 Channel utilization should be under 50%.
 
 5GHz = recommended 40 MHz
+6GHz = recommended 80 MHz
+
+No more than 3 SSIDs per AP
+
+In order to ensure quality of experience it is recommended to have around 25 clients per radio or 50 clients per AP in high-density deployments.
+
+A common estimate of a device's actual throughput is about half of the data rate as advertised by its manufacturer. As noted above, it is important to also reduce this value to the data rate for a 20 MHz channel width. Below are the most common data rates and the estimated device throughput (half of the advertised rate). Given the multiple factors affecting performance it is a good practice to reduce the throughput further by 30%
 
 Key features = OFDMA, band steering, AI-RRM
 
