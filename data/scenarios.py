@@ -2,14 +2,14 @@ SCENARIOS = {
     "scenario_1": {
         "name": "Office 1",
         "description": " – Open office w/ minimal walls",
-        "coverage_m2": 350,
+        "coverage_m2": 230,
         "max_users_per_ap": 35,
         "img": "images/cenario_1.png"
     },
     "scenario_2": {
         "name": "Office 2",
         "description": " – Open office w/ some walls",
-        "coverage_m2": 250,
+        "coverage_m2": 175,
         "max_users_per_ap": 30,
         "img": "images/cenario_2.png"
     },
@@ -23,8 +23,8 @@ SCENARIOS = {
     "auditorium": {
         "name": "Auditorium",
         "description": " – High-density room",
-        "coverage_m2": 400,
-        "max_users_per_ap": 60,
+        "coverage_m2": 175,
+        "max_users_per_ap": 50,
         "img": "images/auditorio.png"
     }
 }
