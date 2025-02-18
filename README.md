@@ -44,9 +44,11 @@ wi-sizer/
 ## References
 This project was developed based on several key references and best practices:
 - [Campus LAN and Wireless LAN Solution Design Guide](https://www.cisco.com/c/en/us/td/docs/solutions/CVD/Campus/cisco-campus-lan-wlan-design-guide.html)
-- [Cisco Cloud Campus LAN Design Guide (CVD)](https://www.cisco.com/c/en/us/solutions/collateral/enterprise/design-zone-campus/cloud-campus-lan-design-guide.html)
+- [Cisco Live Presentations](https://www.ciscolive.com/on-demand/on-demand-library.html#/)
+- [Cisco High Density Wireless Design](https://www.youtube.com/watch?v=c8w6Mfck0nQ)
+- [Cisco Wireless Competitive Assessment - Miercom](https://miercom.com/wp-content/uploads/2024/10/Miercom-Cisco-Wireless-DR240115E.pdf)
+- [Meraki Campus LAN; Planning, Design Guidelines and Best Practices](https://documentation.meraki.com/MS/Meraki_Campus_LAN%3B_Planning%2C_Design_Guidelines_and_Best_Practices)
 - [High Density Wi-Fi Deployments](https://documentation.meraki.com/Architectures_and_Best_Practices/Cisco_Meraki_Best_Practice_Design/Best_Practice_Design_-_MR_Wireless/High_Density_Wi-Fi_Deployments)
-- [Meraki Wireless for Enterprise Best Practices - Architecture](https://documentation.meraki.com/Architectures_and_Best_Practices/Meraki_Wireless_for_Enterprise_Best_Practices/Meraki_Wireless_for_Enterprise_Best_Practices_-_Architecture)
 - [Meraki Wireless for Enterprise Best Practices- RF Design](https://documentation.meraki.com/Architectures_and_Best_Practices/Meraki_Wireless_for_Enterprise_Best_Practices/Meraki_Wireless_for_Enterprise_Best_Practices-_RF_Design)
 
 ## License

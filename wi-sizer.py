@@ -23,8 +23,7 @@ st.set_page_config(
     layout="wide"  # Use the full browser width
 )
 
-# Override container and button styling for wider layout, green buttons,
-# and adjust the meraki_logo styling so it is not rounded or clipped.
+# Override container and button styling for wider layout, green buttons, etc.
 st.markdown(
     """
     <style>
@@ -52,10 +51,11 @@ st.markdown(
     a.custom-link:hover {
         text-decoration: underline;
     }
-    /* Remove rounding and clipping from Meraki logo */
+    /* Fix Meraki logo: remove rounding, prevent clipping, align left */
     img[src*="meraki_logo.png"] {
         border-radius: 0 !important;
         object-fit: contain !important;
+        object-position: left !important;
         clip-path: none !important;
     }
     /* Reduce vertical margins for title and subtitle */
