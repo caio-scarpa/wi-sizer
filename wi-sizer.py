@@ -59,6 +59,7 @@ st.markdown(
     h1 {
         margin-top: 10px !important;
         margin-bottom: 5px !important;
+        font-size: 3rem !important;
     }
     h2, h3, p {
         margin-top: 5px !important;
