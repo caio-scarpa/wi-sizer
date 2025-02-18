@@ -1,22 +1,19 @@
+# -*- coding: utf-8 -*-
+
 import streamlit as st
 import math
 from PIL import Image
 
-# Import your scenario, AP, and switch data modules
+# Import scenarios, APs, and switches data modules
 from data.scenarios import SCENARIOS, get_scenario
 from data.ap_models import AP_MODELS
 from data.switch_models import SWITCH_MODELS
 
-# ---------------------------
 # Global Styling Constants
-# ---------------------------
 GLOBAL_BG_COLOR = "#F4F4F4"         # Background card color
 GLOBAL_TEXT_COLOR = "#27AE60"       # Green color
-BUTTON_BG_COLOR = "#27AE60"         # Button color
 
-# ---------------------------
 # Page Layout & Container Width
-# ---------------------------
 st.set_page_config(
     page_title="Meraki Wi-Sizer Tool",
     page_icon="images/meraki.png",
@@ -72,36 +69,31 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------------------------
 # Helper Functions
-# ---------------------------
 def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: str, ceiling_height: float = 3.0):
-    """
-    Calculate the recommended number of APs, select the appropriate AP model,
-    and compute per-AP metrics.
-    """
+    concurrency = 0.7
+    concurrent_users = users * concurrency
+    background_per_user = concurrent_users * 2
+
     throughput_per_user = 4
     background_sync = 0.5
-    concurrency = 0.7
-    concurrent_users = math.ceil(users * concurrency)
 
     scenario_data = get_scenario(scenario_type)
     coverage_per_ap = scenario_data["coverage_m2"]
-    max_users_per_ap = scenario_data["max_users_per_ap"]
+    max_users_per_ap = scenario_data["max_users_per_ap"] #########################################################
 
-    background_devices = 0 if scenario_type == "auditorium" else math.ceil(concurrent_users * 1.5)
+    background_devices = 0 if scenario_type == "auditorium" else background_per_user
     devices_5ghz = math.ceil((concurrent_users + background_devices) * 0.7)
-    total_bandwidth = (concurrent_users * throughput_per_user) + (background_devices * background_sync)
+    total_bandwidth = math.ceil((concurrent_users * throughput_per_user) + (background_devices * background_sync))
 
-    # Baseline AP capacity (e.g., MR28: 180 * 0.8 = 126 Mbps)
-    ap_capacity = 180 * 0.8  
+    ap_capacity = 180 * 0.8  #########################################################
 
     # Calculate required AP count from capacity, coverage, and density
-    aps_capacity = math.ceil(total_bandwidth / ap_capacity)
-    aps_coverage = math.ceil(area / coverage_per_ap)
-    aps_density = math.ceil(devices_5ghz / max_users_per_ap)
+    aps_capacity = math.ceil(total_bandwidth / ap_capacity) #########################################################
+    aps_coverage = math.ceil(area / coverage_per_ap) #########################################################
+    aps_density = math.ceil(devices_5ghz / max_users_per_ap) #########################################################
     recommended_aps = max(aps_capacity, aps_coverage, aps_density)
-    effective_users_per_ap = devices_5ghz / recommended_aps
+    effective_users_per_ap = math.ceil(devices_5ghz / recommended_aps)
 
     # AP model selection based on Wi‑Fi generation and density
     if wifi_generation == "Wi-Fi 6":
@@ -125,58 +117,43 @@ def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: 
             ap_model = "CW9178"
         else:
             ap_model = "CW9176"
-    else:
-        ap_model = "MR28"  # Fallback
 
     ap_info = AP_MODELS[wifi_generation][ap_model].copy()
-    ap_info["Environment"] = "Indoor"  # This field will be replaced in the table with Antenna Type
     users_per_ap = math.ceil(users / recommended_aps)
     bandwidth_per_ap = round(total_bandwidth / recommended_aps, 0)
-    data_wire = math.ceil(bandwidth_per_ap * 1.5)
+    data_wire = math.ceil(bandwidth_per_ap * 1.5) #########################################################
 
     return recommended_aps, ap_model, users_per_ap, bandwidth_per_ap, ap_info
 
 def get_effective_port_count(switch_info: dict, required_speed: float) -> int:
-    """
-    Determine how many physical ports on the switch support at least the required speed.
-    """
-    if "Port Speed" in switch_info:
-        speeds_field = switch_info["Port Speed"]
-        if isinstance(speeds_field, list) and all(isinstance(item, dict) for item in speeds_field):
-            effective_count = 0
-            for group in speeds_field:
-                group_speeds = group.get("Speed (Gbps)", [])
-                if group_speeds and max(group_speeds) >= required_speed:
-                    effective_count += group.get("Ports", 0)
-            return effective_count
-        elif isinstance(speeds_field, list):
-            return sum(1 for speed in speeds_field if speed >= required_speed)
-    elif "Port Speed (Gbps)" in switch_info:
-        speeds = switch_info["Port Speed (Gbps)"]
-        if isinstance(speeds, list):
-            if len(speeds) == 1 and switch_info.get("Access Ports"):
-                return switch_info["Access Ports"] if speeds[0] >= required_speed else 0
-            else:
-                return sum(1 for speed in speeds if speed >= required_speed)
-    return 0
+    # Determine how many physical ports on the switch support at least the required speed.
+
+    effective_count = 0
+    # Get the list from the "Port Speed" key (default to an empty list if not found)
+    speeds_field = switch_info.get("Port Speed", [])
+    # Iterate over each port group dictionary
+    for group in speeds_field:
+        group_speeds = group.get("Speed (Gbps)", [])
+        if group_speeds and max(group_speeds) >= required_speed:
+            effective_count += group.get("Ports", 0)
+    return effective_count
 
 def calculate_switches(num_aps: int, ap_info: dict):
-    """
-    Determine the most suitable PoE switch model and how many units are needed.
-    """
+    # Determine the most suitable PoE switch model and how many units are needed.
+
     import math
-    ap_power = ap_info.get("POE") or ap_info.get("PoE")
+    ap_power = ap_info.get("PoE")
     if not ap_power:
-        st.warning("AP model does not have a valid PoE value.")
+        st.warning("AP model doesn't have a valid PoE value.")
         return (None, None)
 
     port_speed = ap_info.get("Port Speed", [])
-    required_speed = max(port_speed) if (isinstance(port_speed, list) and port_speed and 
+    required_speed = max(port_speed) if (isinstance(port_speed, list) and port_speed and # Add AP Uplink speed calculation
                                           all(isinstance(s, (int, float)) for s in port_speed)) else 1
 
     best_option = None
     best_switches_needed = None
-    margin = 0.7  # Use 70% of capacity
+    margin = 0.7  # 30% of margin - future growth
 
     for family, switches in SWITCH_MODELS.items():
         for model, info in switches.items():
@@ -200,40 +177,21 @@ def calculate_switches(num_aps: int, ap_info: dict):
     return (best_option, best_switches_needed)
 
 def format_port_config(switch_info: dict) -> str:
-    """
-    Format the switch's access port configuration details, appending " Gbps".
-    """
-    if "Port Speed" in switch_info:
-        speeds_field = switch_info["Port Speed"]
-        if isinstance(speeds_field, list) and all(isinstance(item, dict) for item in speeds_field):
-            group_strings = []
-            for group in speeds_field:
-                ports = group.get("Ports")
-                speeds = group.get("Speed (Gbps)", [])
-                if ports is not None and speeds:
-                    speeds_str = "/".join(str(s) for s in speeds)
-                    group_strings.append(f"{ports} x {speeds_str} Gbps")
-            return " + ".join(group_strings)
-        elif isinstance(speeds_field, list):
-            access_ports = switch_info.get("Access Ports")
-            if access_ports is not None and speeds_field:
-                speeds_str = "/".join(str(s) for s in speeds_field)
-                return f"{access_ports} x {speeds_str} Gbps"
-    elif "Port Speed (Gbps)" in switch_info:
-        speeds = switch_info["Port Speed (Gbps)"]
-        access_ports = switch_info.get("Access Ports")
-        if access_ports is not None and isinstance(speeds, list) and speeds:
-            if len(speeds) == 1:
-                return f"{access_ports} x {speeds[0]} Gbps"
-            else:
-                speeds_str = "/".join(str(s) for s in speeds)
-                return f"{access_ports} x {speeds_str} Gbps"
-    return ""
+    # Format the switch's access port configuration details, appending " Gbps"
+
+    port_speed_groups = switch_info.get("Port Speed", [])
+    group_strings = []
+    for group in port_speed_groups:
+        ports = group.get("Ports")
+        speeds = group.get("Speed (Gbps)", [])
+        if ports is not None and speeds:
+            speeds_str = "/".join(str(s) for s in speeds)
+            group_strings.append(f"{ports} x {speeds_str} Gbps")
+    return " + ".join(group_strings)
 
 def render_result_card(title: str, content_html: str, bg_color: str = GLOBAL_BG_COLOR):
-    """
-    Renders a card-like container with a title and some HTML content.
-    """
+    # Renders a card-like container with a title and some HTML content.
+
     st.markdown(f"""
     <div style="background-color: {bg_color}; padding: 20px; border-radius: 10px; margin-top: 20px;">
         <h2 style="color: {GLOBAL_TEXT_COLOR}; text-align: center;">{title}</h2>
@@ -241,15 +199,10 @@ def render_result_card(title: str, content_html: str, bg_color: str = GLOBAL_BG_
     </div>
     """, unsafe_allow_html=True)
 
-# ---------------------------
 # AP & Switch Rendering Functions
-# ---------------------------
 def render_ap_details(ap_info: dict, ap_model: str):
-    """
-    Render the AP details section as a single table with a 30/70 column split,
-    no outer border (only internal vertical dividers), plus Datasheet/Installation Guide buttons.
-    Replace "Environment" with "Antenna Type" and display "Omnidirectional Indoor Antenna".
-    """
+    # Render the AP details section 
+
     # Determine number of ports (default to 1)
     ports = ap_info.get("Ports", 1)
     
@@ -264,7 +217,6 @@ def render_ap_details(ap_info: dict, ap_model: str):
     second_col_style = "width: 70%; padding: 10px; text-align: left; border-left: 1px solid #ccc;"
     bold_first_col_style = "font-weight: bold; " + first_col_style
 
-    # Replace "Environment" with "Antenna Type"
     ap_table = f"""
     <table style="{table_style}">
       <tr>
@@ -307,10 +259,6 @@ def render_ap_details(ap_info: dict, ap_model: str):
     render_result_card(f"Recommended AP Model: <u>{ap_model}</u>", ap_table)
 
 def render_switch_details(switch_option, switches_needed):
-    """
-    Render the PoE Access Switch details section as a single table with a 30/70
-    column split, no outer border (only internal vertical dividers), plus Datasheet/Installation Guide.
-    """
     if not switch_option:
         st.warning("No suitable switch option could be determined with the current parameters.")
         return
@@ -333,6 +281,16 @@ def render_switch_details(switch_option, switches_needed):
     second_col_style = "width: 70%; padding: 10px; text-align: left; border-left: 1px solid #ccc;"
     bold_first_col_style = "font-weight: bold; " + first_col_style
 
+    # "details" block with 10px bottom margin
+    details = f"""
+    <div style="margin-bottom: 20px;">
+      <p style="font-size: 20px; text-align: center;">
+        Based on your AP requirements, you will need <strong>{switches_needed}</strong> {unit_str}.
+      </p>
+    </div>
+    """
+
+    # switch_table block
     switch_table = f"""
     <table style="{table_style}">
       <tr>
@@ -367,13 +325,16 @@ def render_switch_details(switch_option, switches_needed):
         </a>
     </div>
     """
-    # Underline the switch model in the title
-    render_result_card(f"Recommended Access Switch: <u>{switch_model}</u>", switch_table)
+
+    # Combine details + switch_table
+    content = details + switch_table
+
+    # Render the card with combined content
+    render_result_card(f"Recommended Access Switch: <u>{switch_model}</u>", content)
 
 def render_bom(recommended_aps, ap_info, switch_option, switches_needed):
-    """
-    Render the final Bill of Materials section.
-    """
+    # Render the final Bill of Materials section.
+
     bom_ap_sku = ap_info.get("SKU", "N/A")
     bom_switch_sku = switch_option[2].get("SKU") if switch_option else "N/A"
     bom_switch_qty = switches_needed if switch_option else 0
@@ -404,9 +365,7 @@ def render_bom(recommended_aps, ap_info, switch_option, switches_needed):
     """
     render_result_card("Bill of Materials (BoM)", bom_html)
 
-# ---------------------------
 # Main Application
-# ---------------------------
 def main():
     # Display the Meraki logo in the sidebar so it's always visible
     st.sidebar.image("images/meraki_logo.png", width=150)
@@ -491,8 +450,7 @@ def main():
             render_bom(recommended_aps, ap_info, switch_option, switches_needed)
 
             # Disclaimer Section
-            if (area > 1200 or ceiling_height > 4.5 or users > 500 or 
-                (scenario_type == "auditorium" and recommended_aps >= 5)):
+            if (area > 1200 or ceiling_height > 4.5 or users > 500 or recommended_aps > 12 or (scenario_type == "auditorium" and recommended_aps >= 5)):
                 st.markdown(
                     "<div style='text-align: center; color: red; margin-top: 20px;'>"
                     "<h4>🚨 Predictive Site Survey Recommended</h4>"
@@ -504,7 +462,7 @@ def main():
                 st.markdown(
                     "<div style='text-align: center; color: red; margin-top: 20px;'>"
                     "<h4>⚠️ Preliminary Estimation Disclaimer</h4>"
-                    "<p>This tool provides a preliminary estimation and does not replace a full Predictive Site Survey.</p>"
+                    "<p>This tool provides a preliminary estimation and doesn't replace a full Predictive Site Survey.</p>"
                     "</div>",
                     unsafe_allow_html=True
                 )
