@@ -2,6 +2,7 @@
 
 ## Overview
 The Meraki Wi-Sizer Tool is a web-based application built to **estimate the required number of Meraki Access Points (APs) for a given indoor office environment**. This tool provides a preliminary wireless sizing estimation based on area, user density, and predefined scenarios, helping users make data-driven decisions about their Meraki wireless deployments on bugdetary stage.
+http://wi-sizer-nvktzggkdtjc.dynamic-m.com:8501/
 
 ## Features
 - **Scenario-Based AP Estimation** – Choose from predefined office layouts to determine the number of APs required.
