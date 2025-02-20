@@ -2,6 +2,9 @@
 
 import streamlit as st
 import math
+import os
+import json
+import openai  # or your pinned openai version
 from PIL import Image
 
 # Import scenarios, APs, and switches data modules
@@ -10,67 +13,65 @@ from data.ap_models import AP_MODELS
 from data.switch_models import SWITCH_MODELS
 
 # Global Styling Constants
-GLOBAL_BG_COLOR = "#F4F4F4"         # Background card color
-GLOBAL_TEXT_COLOR = "#27AE60"       # Green color
+GLOBAL_BG_COLOR = "#F4F4F4"
+GLOBAL_TEXT_COLOR = "#27AE60"
 
 # Page Layout & Container Width
 st.set_page_config(
     page_title="Meraki Wi-Sizer Tool",
     page_icon="images/meraki.png",
-    layout="wide"  # Use the full browser width
+    layout="wide"
 )
 
-# Override container and button styling for wider layout, green buttons, etc.
+openai.api_key = "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"
+
 st.markdown(
-    """
+    f"""
     <style>
-    /* Increase central container width */
-    .block-container {
+    .block-container {{
         max-width: 1400px !important;
         padding-top: 1rem;
         padding-bottom: 1rem;
         margin: auto;
-    }
-    /* Style all buttons (including the Calculate button) in green */
-    div.stButton > button {
-        background-color: #27AE60 !important;
+    }}
+    div.stButton > button {{
+        background-color: {GLOBAL_TEXT_COLOR} !important;
         color: white !important;
         border-radius: 8px !important;
         border: none !important;
         font-weight: bold !important;
-    }
-    /* Custom link styling */
-    a.custom-link {
-        color: #27AE60;
+    }}
+    a.custom-link {{
+        color: {GLOBAL_TEXT_COLOR};
         font-weight: bold;
         text-decoration: none;
-    }
-    a.custom-link:hover {
+    }}
+    a.custom-link:hover {{
         text-decoration: underline;
-    }
-    /* Fix Meraki logo: remove rounding, prevent clipping, align left */
-    img[src*="meraki_logo.png"] {
+    }}
+    img[src*="meraki_logo.png"] {{
         border-radius: 0 !important;
         object-fit: contain !important;
         object-position: left !important;
         clip-path: none !important;
-    }
-    /* Reduce vertical margins for title and subtitle */
-    h1 {
+    }}
+    h1 {{
         margin-top: 10px !important;
         margin-bottom: 5px !important;
-        font-size: 3rem !important;
-    }
-    h2, h3, p {
+    }}
+    h2, h3, p {{
         margin-top: 5px !important;
         margin-bottom: 5px !important;
-    }
+    }}
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# Helper Functions
+# ------------------------------------------------------------------------------
+# HELPER FUNCTIONS
+# ------------------------------------------------------------------------------
+
 def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: str, ceiling_height: float = 3.0):
     concurrency = 0.7
     concurrent_users = users * concurrency
@@ -81,25 +82,24 @@ def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: 
 
     scenario_data = get_scenario(scenario_type)
     coverage_per_ap = scenario_data["coverage_m2"]
-    max_users_per_ap = scenario_data["max_users_per_ap"] #########################################################
+    max_users_per_ap = scenario_data["max_users_per_ap"]
 
     background_devices = 0 if scenario_type == "auditorium" else background_per_user
     devices_5ghz = math.ceil((concurrent_users + background_devices) * 0.7)
     total_bandwidth = math.ceil((concurrent_users * throughput_per_user) + (background_devices * background_sync))
-    # band_5ghz = math.ceil(total_bandwidth * 0.7)
-    # ap_5ghz = ap_capacity_5ghz * 0.175
-    # aps_capacity_5ghz = math.ceil(band_5ghz / ap_5ghz)
 
-    ap_capacity = 180 * 0.8  #########################################################
+    ap_capacity = 180 * 0.8
 
-    # Calculate required AP count from capacity, coverage, and density
-    aps_capacity = math.ceil(total_bandwidth / ap_capacity) #########################################################
-    aps_coverage = math.ceil(area / coverage_per_ap) #########################################################
-    aps_density = math.ceil(devices_5ghz / max_users_per_ap) #########################################################
+    aps_capacity = math.ceil(total_bandwidth / ap_capacity)
+    aps_coverage = math.ceil(area / coverage_per_ap)
+    aps_density = math.ceil(devices_5ghz / max_users_per_ap)
     recommended_aps = max(aps_capacity, aps_coverage, aps_density)
-    effective_users_per_ap = math.ceil(devices_5ghz / recommended_aps)
 
-    # AP model selection based on Wi‑Fi generation and density
+    effective_users_per_ap = math.ceil(devices_5ghz / recommended_aps)
+    users_per_ap = math.ceil(users / recommended_aps)
+    bandwidth_per_ap = round(total_bandwidth / recommended_aps, 0)
+
+    # Simplified logic for selecting AP model
     if wifi_generation == "Wi-Fi 6":
         if recommended_aps <= 5 and scenario_type != "auditorium" and effective_users_per_ap <= 20:
             ap_model = "MR28"
@@ -123,41 +123,28 @@ def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: 
             ap_model = "CW9176"
 
     ap_info = AP_MODELS[wifi_generation][ap_model].copy()
-    users_per_ap = math.ceil(users / recommended_aps)
-    bandwidth_per_ap = round(total_bandwidth / recommended_aps, 0)
-    data_wire = math.ceil(bandwidth_per_ap * 1.5) #########################################################
-
-    return recommended_aps, ap_model, users_per_ap, bandwidth_per_ap, ap_info
+    return recommended_aps, ap_model, users_per_ap, effective_users_per_ap, bandwidth_per_ap, ap_info
 
 def get_effective_port_count(switch_info: dict, required_speed: float) -> int:
-    # Determine how many physical ports on the switch support at least the required speed.
-
     effective_count = 0
-    # Get the list from the "Port Speed" key (default to an empty list if not found)
-    speeds_field = switch_info.get("Port Speed", [])
-    # Iterate over each port group dictionary
-    for group in speeds_field:
-        group_speeds = group.get("Speed (Gbps)", [])
-        if group_speeds and max(group_speeds) >= required_speed:
+    for group in switch_info.get("Port Speed", []):
+        speeds = group.get("Speed (Gbps)", [])
+        if speeds and max(speeds) >= required_speed:
             effective_count += group.get("Ports", 0)
     return effective_count
 
 def calculate_switches(num_aps: int, ap_info: dict):
-    # Determine the most suitable PoE switch model and how many units are needed.
-
-    import math
     ap_power = ap_info.get("PoE")
     if not ap_power:
         st.warning("AP model doesn't have a valid PoE value.")
         return (None, None)
 
     port_speed = ap_info.get("Port Speed", [])
-    required_speed = max(port_speed) if (isinstance(port_speed, list) and port_speed and # Add AP Uplink speed calculation
-                                          all(isinstance(s, (int, float)) for s in port_speed)) else 1
+    required_speed = max(port_speed) if (isinstance(port_speed, list) and port_speed and all(isinstance(s, (int, float)) for s in port_speed)) else 1
 
     best_option = None
     best_switches_needed = None
-    margin = 0.7  # 30% of margin - future growth
+    margin = 0.7
 
     for family, switches in SWITCH_MODELS.items():
         for model, info in switches.items():
@@ -165,15 +152,14 @@ def calculate_switches(num_aps: int, ap_info: dict):
             if effective_port_count <= 0:
                 continue
 
-            effective_port_count_margin = math.floor(effective_port_count * margin)
+            available_ports = math.floor(effective_port_count * margin)
             poe_budget = info.get("PoE Budget (W)", 0)
-            poe_budget_margin = poe_budget * margin
-            poe_limit_margin = math.floor(poe_budget_margin / ap_power)
-            available_ports = min(effective_port_count_margin, poe_limit_margin)
-            if available_ports <= 0:
+            poe_limit = math.floor((poe_budget * margin) / ap_power)
+            available = min(available_ports, poe_limit)
+            if available <= 0:
                 continue
 
-            switches_needed = math.ceil(num_aps / available_ports)
+            switches_needed = math.ceil(num_aps / available)
             if best_option is None or (best_switches_needed is not None and switches_needed < best_switches_needed):
                 best_option = (family, model, info)
                 best_switches_needed = switches_needed
@@ -181,11 +167,8 @@ def calculate_switches(num_aps: int, ap_info: dict):
     return (best_option, best_switches_needed)
 
 def format_port_config(switch_info: dict) -> str:
-    # Format the switch's access port configuration details, appending " Gbps"
-
-    port_speed_groups = switch_info.get("Port Speed", [])
     group_strings = []
-    for group in port_speed_groups:
+    for group in switch_info.get("Port Speed", []):
         ports = group.get("Ports")
         speeds = group.get("Speed (Gbps)", [])
         if ports is not None and speeds:
@@ -194,8 +177,6 @@ def format_port_config(switch_info: dict) -> str:
     return " + ".join(group_strings)
 
 def render_result_card(title: str, content_html: str, bg_color: str = GLOBAL_BG_COLOR):
-    # Renders a card-like container with a title and some HTML content.
-
     st.markdown(f"""
     <div style="background-color: {bg_color}; padding: 20px; border-radius: 10px; margin-top: 20px;">
         <h2 style="color: {GLOBAL_TEXT_COLOR}; text-align: center;">{title}</h2>
@@ -203,69 +184,48 @@ def render_result_card(title: str, content_html: str, bg_color: str = GLOBAL_BG_
     </div>
     """, unsafe_allow_html=True)
 
-# AP & Switch Rendering Functions
 def render_ap_details(ap_info: dict, ap_model: str):
-    # Render the AP details section 
-
-    # Determine number of ports (default to 1)
     ports = ap_info.get("Ports", 1)
-    
-    # Build a string for port speed as a single line (always include the port count)
     port_speed_list = [str(speed) for speed in ap_info.get('Port Speed', []) if isinstance(speed, (int, float))]
     speeds_str = "/".join(port_speed_list)
     port_speeds_text = f"{ports} x {speeds_str} Gbps" if speeds_str else "N/A"
-    
-    # Define table styles with a 30/70 column split
-    table_style = "width: 100%; border-collapse: collapse; border: none;"
-    first_col_style = "width: 30%; padding: 10px; text-align: left;"
-    second_col_style = "width: 70%; padding: 10px; text-align: left; border-left: 1px solid #ccc;"
-    bold_first_col_style = "font-weight: bold; " + first_col_style
-
     ap_table = f"""
-    <table style="{table_style}">
+    <table style="width: 100%; border-collapse: collapse;">
       <tr>
-        <td style="{bold_first_col_style}">Antenna Type:</td>
-        <td style="{second_col_style}">Omnidirectional Indoor Antenna</td>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">Antenna Type:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">Omnidirectional Indoor</td>
       </tr>
       <tr>
-        <td style="{bold_first_col_style}">Wi-Fi Standard:</td>
-        <td style="{second_col_style}">{ap_info.get('Wi-Fi Standard')}</td>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">Wi-Fi Standard:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">{ap_info.get('Wi-Fi Standard')}</td>
       </tr>
       <tr>
-        <td style="{bold_first_col_style}">Spatial Streams:</td>
-        <td style="{second_col_style}">{ap_info.get('Spatial Streams')}</td>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">Spatial Streams:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">{ap_info.get('Spatial Streams')}</td>
       </tr>
       <tr>
-        <td style="{bold_first_col_style}">PoE Type:</td>
-        <td style="{second_col_style}">{ap_info.get('PoE Type')}</td>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">PoE Type:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">{ap_info.get('PoE Type')}</td>
       </tr>
       <tr>
-        <td style="{bold_first_col_style}">Port Speed:</td>
-        <td style="{second_col_style}">{port_speeds_text}</td>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">Port Speed:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">{port_speeds_text}</td>
       </tr>
       <tr>
-        <td style="{bold_first_col_style}">SKU:</td>
-        <td style="{second_col_style}">{ap_info.get('SKU')}</td>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">SKU:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">{ap_info.get('SKU')}</td>
       </tr>
     </table>
     <div style="text-align: center; margin-top: 20px;">
-        <a href="{ap_info.get('Datasheet')}" target="_blank" 
-           style="background-color: #27AE60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-right: 10px;">
-           Datasheet
-        </a>
-        <a href="{ap_info.get('Installation Guide')}" target="_blank" 
-           style="background-color: #27AE60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-           Installation Guide
-        </a>
+        <a href="{ap_info.get('Datasheet')}" target="_blank" style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-right: 10px;">Datasheet</a>
+        <a href="{ap_info.get('Installation Guide')}" target="_blank" style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Installation Guide</a>
     </div>
     """
-    # Underline the AP model in the title
     render_result_card(f"Recommended AP Model: <u>{ap_model}</u>", ap_table)
 
 def render_switch_details(switch_option, switches_needed):
     if not switch_option:
-        st.warning("No suitable switch option could be determined with the current parameters.")
-        return
+        return  # No switch to render
 
     family, switch_model, switch_info = switch_option
     port_config = format_port_config(switch_info)
@@ -280,12 +240,41 @@ def render_switch_details(switch_option, switches_needed):
 
     unit_str = "unit" if switches_needed == 1 else "units"
 
-    table_style = "width: 100%; border-collapse: collapse; border: none;"
-    first_col_style = "width: 30%; padding: 10px; text-align: left;"
-    second_col_style = "width: 70%; padding: 10px; text-align: left; border-left: 1px solid #ccc;"
-    bold_first_col_style = "font-weight: bold; " + first_col_style
+    switch_table = f"""
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">Access Ports:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">{port_config}</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">Uplinks:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">{uplink_info}</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">PoE Budget:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">{switch_info.get('PoE Budget (W)', 0)} W</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">PoE Type:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">{switch_info.get('PoE Type')}</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">SKU:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">{switch_info.get('SKU')}</td>
+      </tr>
+    </table>
+    <div style="text-align: center; margin-top: 20px;">
+        <a href="{switch_info.get('Datasheet')}" target="_blank" 
+           style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-right: 10px;">
+           Datasheet
+        </a>
+        <a href="{switch_info.get('Installation Guide')}" target="_blank" 
+           style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+           Installation Guide
+        </a>
+    </div>
+    """
 
-    # "details" block with 10px bottom margin
     details = f"""
     <div style="margin-bottom: 20px;">
       <p style="font-size: 20px; text-align: center;">
@@ -293,91 +282,126 @@ def render_switch_details(switch_option, switches_needed):
       </p>
     </div>
     """
-
-    # switch_table block
-    switch_table = f"""
-    <table style="{table_style}">
-      <tr>
-        <td style="{bold_first_col_style}">Access Ports:</td>
-        <td style="{second_col_style}">{port_config}</td>
-      </tr>
-      <tr>
-        <td style="{bold_first_col_style}">PoE Budget:</td>
-        <td style="{second_col_style}">{switch_info.get('PoE Budget (W)', 0)} W</td>
-      </tr>
-      <tr>
-        <td style="{bold_first_col_style}">PoE Type:</td>
-        <td style="{second_col_style}">{switch_info.get('PoE Type')}</td>
-      </tr>
-      <tr>
-        <td style="{bold_first_col_style}">Uplinks:</td>
-        <td style="{second_col_style}">{uplink_info}</td>
-      </tr>
-      <tr>
-        <td style="{bold_first_col_style}">SKU:</td>
-        <td style="{second_col_style}">{switch_info.get('SKU')}</td>
-      </tr>
-    </table>
-    <div style="text-align: center; margin-top: 20px;">
-        <a href="{switch_info.get('Datasheet')}" target="_blank" 
-           style="background-color: #27AE60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-right: 10px;">
-           Datasheet
-        </a>
-        <a href="{switch_info.get('Installation Guide')}" target="_blank" 
-           style="background-color: #27AE60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-           Installation Guide
-        </a>
-    </div>
-    """
-
-    # Combine details + switch_table
     content = details + switch_table
-
-    # Render the card with combined content
     render_result_card(f"Recommended Access Switch: <u>{switch_model}</u>", content)
 
 def render_bom(recommended_aps, ap_info, switch_option, switches_needed):
-    # Render the final Bill of Materials section.
+    # Build the Access Point row (always shown)
+    ap_sku = ap_info.get("SKU", "N/A")
+    ap_line = f"""
+    <tr style="text-align: center;">
+        <td style="padding: 10px;">Access Point</td>
+        <td style="padding: 10px; border-left: 1px solid #ccc;">{recommended_aps}</td>
+        <td style="padding: 10px; border-left: 1px solid #ccc;">{ap_sku}</td>
+    </tr>
+    """
+    
+    # Always build the PoE Access Switch row
+    # If no switch option is provided, default to 0 quantity and "N/A" for SKU.
+    if switch_option is not None:
+        family, switch_model, switch_info = switch_option
+        switch_sku = switch_info.get("SKU", "N/A")
+        switch_quantity = switches_needed if switches_needed is not None else 0
+    else:
+        switch_model = "N/A"
+        switch_sku = "N/A"
+        switch_quantity = 0
 
-    bom_ap_sku = ap_info.get("SKU", "N/A")
-    bom_switch_sku = switch_option[2].get("SKU") if switch_option else "N/A"
-    bom_switch_qty = switches_needed if switch_option else 0
+    switch_line = f"""
+    <tr style="text-align: center;">
+        <td style="padding: 10px;">PoE Access Switch</td>
+        <td style="padding: 10px; border-left: 1px solid #ccc;">{switch_quantity}</td>
+        <td style="padding: 10px; border-left: 1px solid #ccc;">{switch_sku}</td>
+    </tr>
+    """
+
     bom_html = f"""
-    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-        <tr style="text-align: center;">
-            <th style="padding: 10px;">Item</th>
-            <th style="padding: 10px; border-left: 1px solid #ccc;">Quantity</th>
-            <th style="padding: 10px; border-left: 1px solid #ccc;">Part Number</th>
-        </tr>
-        <tr style="text-align: center;">
-            <td style="padding: 10px;">Access Point</td>
-            <td style="padding: 10px; border-left: 1px solid #ccc;">{recommended_aps}</td>
-            <td style="padding: 10px; border-left: 1px solid #ccc;">{bom_ap_sku}</td>
-        </tr>
-        <tr style="text-align: center;">
-            <td style="padding: 10px;">PoE Access Switch</td>
-            <td style="padding: 10px; border-left: 1px solid #ccc;">{bom_switch_qty}</td>
-            <td style="padding: 10px; border-left: 1px solid #ccc;">{bom_switch_sku}</td>
-        </tr>
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr style="text-align: center;">
+        <th style="padding: 10px;">Item</th>
+        <th style="padding: 10px; border-left: 1px solid #ccc;">Quantity</th>
+        <th style="padding: 10px; border-left: 1px solid #ccc;">Part Number</th>
+      </tr>
+      {ap_line}
+      {switch_line}
     </table>
     <div style="text-align: center; margin-top: 20px;">
-        <a href="https://www.merakisizing.com/" target="_blank" 
-           style="background-color: #27AE60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-           Licensing Info
-        </a>
+      <a href="https://www.merakisizing.com/" target="_blank"
+         style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px;
+                text-decoration: none; border-radius: 5px;">
+         Licensing Info
+      </a>
     </div>
     """
     render_result_card("Bill of Materials (BoM)", bom_html)
 
-# Main Application
+def generate_ai_reasoning(
+    wifi_generation: str,
+    ap_model: str,
+    switches_needed: int,
+    switch_model: str,
+    users: int,
+    area: float,
+    effective_users: int,
+    recommended_aps: int,
+    total_high_speed_ports: int,
+    unused_high_speed_ports: int,
+    total_poebudget: int,
+    unused_power: int
+) -> str:
+    """
+    Build the prompt. If switch_model == "N/A", skip the switch text.
+    """
+    ap_generation_dict = AP_MODELS[wifi_generation]
+    dict_str = json.dumps(ap_generation_dict, indent=2)
+
+    switch_text = ""
+    if switch_model != "N/A":
+        switch_text = f"""
+For the access layer to connect and power the APs, we need {switches_needed} model {switch_model}, selected for its high-speed port capacity and PoE budget. 
+With a 30% growth margin, we have {unused_high_speed_ports} unused ports and {unused_power} W unused PoE budget remaining. 
+"""
+
+    prompt = f"""
+You're a Cisco Networking Expert and is helping a partner to size a Meraki wireless network for a traditional office scenario. 
+Just for your context, for a given office scenario, we recommend {recommended_aps} APs of model {ap_model} to support {users} users in a {area} m2 area,  each AP supporting about {effective_users} users.
+{switch_text}
+Be very briefly here: for licensing, recommend the Enterprise tier for APs if it's not a complex RF environment and Enterprise tier for access switches if you don't need Adaptive Policy, Netflow v10, and Encrypted Traffic Analytics.
+Briefly explain why {ap_model} and switch model {switch_model} were chosen, incorporating these details. 
+Below is the list of available AP models for {wifi_generation}:
+{dict_str}
+Remember that it's a single message communication, be directly, precise, technical, adding all the relevant informations, and don't say anything about "feel free to ask for further assistance" - it's not possible in this scenario.
+Never mention that an certain AP "can support up to XX users" and it's capacity in Mbps.
+You don't need to explain the scenario again, like "supporting 50 users in a 100 m2 area", the user already know that.
+When speaking about the switches, you can include how many uplinks and what speeds are the ports, also mentioning if it's capable to do L2 or L3.
+"""
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt.strip()}],
+        max_tokens=300,
+        temperature=0.7
+    )
+    return response.choices[0].message.content.strip()
+
+def get_current_scenario_key(results: dict) -> str:
+    return (
+        f"{results['recommended_aps']}-"
+        f"{results['ap_model']}-"
+        f"{results['users_per_ap']}-"
+        f"{results['effective_users_per_ap']}-"
+        f"{results['bandwidth_per_ap']}-"
+        f"{results['scenario_name']}-"
+        f"{results['wifi_generation']}-"
+        f"{results['users']}-"
+        f"{results['area']}"
+    )
+
 def main():
-    # Display the Meraki logo in the sidebar so it's always visible
     st.sidebar.image("images/meraki_logo.png", width=150)
     
     st.title("Meraki Wi-Sizer Tool")
     st.write("Estimate the number of Access Points (APs) and PoE Switches needed for your Meraki wireless network in an indoor office environment.")
 
-    # Sidebar Input Parameters
     st.sidebar.header("Input Parameters:")
     users = st.sidebar.number_input("Total Number of Users", min_value=1, step=5, value=50)
     area = st.sidebar.number_input("Estimated Area (m²)", min_value=20, step=10, value=100)
@@ -385,7 +409,6 @@ def main():
     wifi_generation = st.sidebar.selectbox("Select the Wi-Fi Generation:", ["Wi-Fi 6", "Wi-Fi 6E", "Wi-Fi 7"])
     st.sidebar.checkbox("Include PoE Access Switches", value=True, key="include_switches")
 
-    # Scenario selection
     st.subheader("Select the most compatible scenario:")
     cols = st.columns(len(SCENARIOS))
     for col, (scenario, data) in zip(cols, SCENARIOS.items()):
@@ -411,72 +434,174 @@ def main():
         elif users <= 0:
             st.warning("Please enter a valid number of users.")
         else:
-            # AP Calculation
-            recommended_aps, ap_model, users_per_ap, bandwidth_per_ap, ap_info = calculate_aps(
+            recommended_aps, ap_model, users_per_ap, effective_users_per_ap, bandwidth_per_ap, ap_info = calculate_aps(
                 area=area,
                 users=users,
                 scenario_type=scenario_type,
                 wifi_generation=wifi_generation,
                 ceiling_height=ceiling_height
             )
-            
-            data_wire = math.ceil(bandwidth_per_ap * 1.5)
-            
-            # AP Summary
-            ap_summary = f"""
-            <div style="display: flex; justify-content: space-around; margin-top: 10px;">
-                <div style="text-align: center;">
-                    <h3 style="color: {GLOBAL_TEXT_COLOR};">🏢 Quantity</h3>
-                    <p style="font-size: 24px; font-weight: bold;">{recommended_aps} AP{'s' if recommended_aps != 1 else ''}</p>
-                </div>
-                <div style="text-align: center;">
-                    <h3 style="color: {GLOBAL_TEXT_COLOR};">👥 Density</h3>
-                    <p style="font-size: 24px; font-weight: bold;">{users_per_ap} Users/AP</p>
-                </div>
-                <div style="text-align: center;">
-                    <h3 style="color: {GLOBAL_TEXT_COLOR};">📡 Capacity</h3>
-                    <p style="font-size: 24px; font-weight: bold;">{round(data_wire)} Mbps/AP</p>
-                </div>
+            scenario_name = SCENARIOS[scenario_type]["name"]
+            st.session_state.calc_results = {
+                "recommended_aps": recommended_aps,
+                "ap_model": ap_model,
+                "users_per_ap": users_per_ap,
+                "effective_users_per_ap": effective_users_per_ap,
+                "bandwidth_per_ap": bandwidth_per_ap,
+                "ap_info": ap_info,
+                "scenario_name": scenario_name,
+                "wifi_generation": wifi_generation,
+                "users": users,
+                "area": area
+            }
+            # Clear any old explanation state
+            if "ai_reasoning" in st.session_state:
+                del st.session_state.ai_reasoning
+            if "scenario_key" in st.session_state:
+                del st.session_state.scenario_key
+
+    if "calc_results" in st.session_state:
+        results = st.session_state.calc_results
+
+        # Display AP Sizing Results
+        ap_summary = f"""
+        <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+            <div style="text-align: center;">
+                <h3 style="color: {GLOBAL_TEXT_COLOR};">🏢 Quantity</h3>
+                <p style="font-size: 24px; font-weight: bold;">{results['recommended_aps']} AP{'s' if results['recommended_aps'] != 1 else ''}</p>
             </div>
-            """
-            render_result_card("Wireless Sizing Results", ap_summary.strip())
-            render_ap_details(ap_info, ap_model)
-
-            # PoE Access Switch Calculation & Display
-            if st.session_state.include_switches:
-                switch_option, switches_needed = calculate_switches(recommended_aps, ap_info)
-                render_switch_details(switch_option, switches_needed)
-            else:
-                switch_option = None
-                switches_needed = None
-
-            # BoM
-            render_bom(recommended_aps, ap_info, switch_option, switches_needed)
-
-            # Disclaimer Section
-            if (area > 1200 or ceiling_height > 4.5 or users > 500 or recommended_aps > 12 or (scenario_type == "auditorium" and recommended_aps >= 5)):
-                st.markdown(
-                    "<div style='text-align: center; color: red; margin-top: 20px;'>"
-                    "<h4>🚨 Predictive Site Survey Recommended</h4>"
-                    "<p>Given the complexity of the requirements, a Predictive Site Survey is strongly recommended. Contact your SE.</p>"
-                    "</div>",
-                    unsafe_allow_html=True
-                )
-            else:
-                st.markdown(
-                    "<div style='text-align: center; color: red; margin-top: 20px;'>"
-                    "<h4>⚠️ Preliminary Estimation Disclaimer</h4>"
-                    "<p>This tool provides a preliminary estimation and doesn't replace a full Predictive Site Survey.</p>"
-                    "</div>",
-                    unsafe_allow_html=True
-                )
-
-    # Footer
-    st.markdown(
+            <div style="text-align: center;">
+                <h3 style="color: {GLOBAL_TEXT_COLOR};">👥 Density</h3>
+                <p style="font-size: 24px; font-weight: bold;">{results['users_per_ap']} Users/AP</p>
+            </div>
+            <div style="text-align: center;">
+                <h3 style="color: {GLOBAL_TEXT_COLOR};">📡 Capacity</h3>
+                <p style="font-size: 24px; font-weight: bold;">{round(results['bandwidth_per_ap'])} Mbps/AP</p>
+            </div>
+        </div>
         """
+        render_result_card("Wireless Sizing Results", ap_summary.strip())
+        render_ap_details(results["ap_info"], results["ap_model"])
+
+        # Initialize default (no switch)
+        switch_option = None
+        switches_needed = None
+        switch_model = "N/A"
+        total_high_speed_ports = 0
+        unused_high_speed_ports = 0
+        total_poebudget = 0
+        unused_power = 0
+        switches_needed = 0
+
+        # If toggled on, compute switch
+        if st.session_state.include_switches:
+            switch_option, switches_needed = calculate_switches(results["recommended_aps"], results["ap_info"])
+            if switch_option is not None:
+                family, switch_model, switch_info = switch_option
+                required_speed = max(results["ap_info"].get("Port Speed", [1]))
+                high_speed_ports = 0
+                for group in switch_info.get("Port Speed", []):
+                    speeds = group.get("Speed (Gbps)", [])
+                    if speeds and max(speeds) >= required_speed:
+                        high_speed_ports += group.get("Ports", 0)
+
+                total_high_speed_ports = high_speed_ports * switches_needed
+                ap_ports_required = results["recommended_aps"] * results["ap_info"].get("Ports", 1)
+                unused_high_speed_ports = total_high_speed_ports - ap_ports_required
+
+                total_poebudget = switches_needed * switch_info.get("PoE Budget (W)", 0)
+                used_power = results["recommended_aps"] * results["ap_info"].get("PoE", 0)
+                unused_power = total_poebudget - used_power
+
+                render_switch_details(switch_option, switches_needed)
+
+        # Render BoM, only includes the switch line if switch_option is not None
+        render_bom(results["recommended_aps"], results["ap_info"], switch_option, switches_needed)
+
+        # Add spacing above the AI Explanation expander
+        st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+
+        # Build a unique scenario key
+        def get_current_scenario_key(results: dict):
+            return (
+                f"{results['recommended_aps']}-"
+                f"{results['ap_model']}-"
+                f"{results['users_per_ap']}-"
+                f"{results['effective_users_per_ap']}-"
+                f"{results['bandwidth_per_ap']}-"
+                f"{results['scenario_name']}-"
+                f"{results['wifi_generation']}-"
+                f"{results['users']}-"
+                f"{results['area']}"
+            )
+
+        current_key = get_current_scenario_key(results)
+        if "scenario_key" not in st.session_state:
+            st.session_state.scenario_key = current_key
+
+        with st.expander("AI Reasoning"):
+            # If the scenario changed, reset explanation
+            if st.session_state.scenario_key != current_key:
+                st.session_state.scenario_key = current_key
+                if "ai_reasoning" in st.session_state:
+                    del st.session_state.ai_reasoning
+
+            # Let user click once
+            if "ai_reasoning" not in st.session_state:
+                if st.button("Generate Explanation", key="ai_reasoning_btn"):
+                    reasoning_text = generate_ai_reasoning(
+                        wifi_generation=results["wifi_generation"],
+                        ap_model=results["ap_model"],
+                        switches_needed=switches_needed,
+                        switch_model=switch_model,
+                        users=results["users"],
+                        area=results["area"],
+                        effective_users=results["effective_users_per_ap"],
+                        recommended_aps=results["recommended_aps"],
+                        total_high_speed_ports=total_high_speed_ports,
+                        unused_high_speed_ports=unused_high_speed_ports,
+                        total_poebudget=total_poebudget,
+                        unused_power=unused_power
+                    )
+                    st.session_state.ai_reasoning = reasoning_text
+            else:
+                st.info("Explanation already generated for this scenario. Recalculate to generate a new explanation.")
+
+            if "ai_reasoning" in st.session_state:
+                st.markdown(
+                    f"<div style='margin-top:10px; text-align:left;'>{st.session_state.ai_reasoning}</div>",
+                    unsafe_allow_html=True
+                )
+
+        # Disclaimer
+        if (
+            results["area"] > 1200
+            or ceiling_height > 4.5
+            or results["users"] > 500
+            or results["recommended_aps"] > 12
+            or (results["scenario_name"] == "Auditorium" and results["recommended_aps"] >= 5)
+        ):
+            st.markdown(
+                "<div style='text-align: center; color: red; margin-top: 20px;'>"
+                "<h4>🚨 Predictive Site Survey Recommended</h4>"
+                "<p>Given the complexity, a full site survey is strongly recommended. Contact your SE.</p>"
+                "</div>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                "<div style='text-align: center; color: red; margin-top: 20px;'>"
+                "<h4>⚠️ Preliminary Estimation Disclaimer</h4>"
+                "<p>This tool provides a preliminary estimation and doesn't replace a full site survey.</p>"
+                "</div>",
+                unsafe_allow_html=True
+            )
+
+    st.markdown(
+        f"""
         <hr>
         <div style="text-align: center; font-size: 0.8rem; color: #555; margin-top: 20px; margin-bottom: 40px;">
-            Designed by Caio Scarpa | Last Updated 02/18/2025
+            Designed by Caio Scarpa | Last Updated 02/19/2025
         </div>
         """,
         unsafe_allow_html=True
