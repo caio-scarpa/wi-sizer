@@ -340,6 +340,9 @@ def generate_ai_reasoning(
     ap_model: str,
     switches_needed: int,
     switch_model: str,
+    switch_type: str,
+    uplink_ports: int,
+    uplink_speed: str,
     users: int,
     area: float,
     effective_users: int,
@@ -358,23 +361,32 @@ def generate_ai_reasoning(
     switch_text = ""
     if switch_model != "N/A":
         switch_text = f"""
-For the access layer to connect and power the APs, we need {switches_needed} model {switch_model}, selected for its high-speed port capacity and PoE budget. 
-With a 30% growth margin, we have {unused_high_speed_ports} unused ports and {unused_power} W unused PoE budget remaining. 
+For the access layer, {switches_needed} unit(s) of switch model {switch_model} were selected.
+This switch is {switch_type} and features {uplink_ports} uplink ports at {uplink_speed} Gbps.
+After a 30% growth margin is applied, there remain {unused_high_speed_ports} unused ports and {unused_power} W of PoE budget available.
+Then, explain why {switches_needed} unit(s) of switch model {switch_model} was chosen. Mention whether it is an L2 or L3 switch, detail its uplink port configuration (number and speeds), and specify that after applying a 30% growth margin, there are {unused_high_speed_ports} unused high-speed ports and {unused_power} W of unused PoE budget.
 """
 
     prompt = f"""
-You're a Cisco Networking Expert and is helping a partner to size a Meraki wireless network for a traditional office scenario. 
-Just for your context, for a given office scenario, we recommend {recommended_aps} APs of model {ap_model} to support {users} users in a {area} m2 area,  each AP supporting about {effective_users} users.
+You're a Cisco Networking Expert and is helping a partner to size a Meraki wireless network for a traditional office scenario. Provide a concise, one-way technical explanation.
+
+Answer instructions:
+Return your answer as a single, direct technical paragraph without any conversational language or follow-up questions.
+Never mention that an certain AP "can support up to XX users" and it's capacity in Mbps.
+You don't need to explain the scenario again, like "supporting 50 users in a 100 m2 area", the user already knows that.
+
+Just for your context, for a given office scenario, we recommend {recommended_aps} APs of model {ap_model} to support {users} users in a {area} m2 area,  each AP supporting about {effective_users} users. Explain why the AP model {ap_model} was selected, emphasizing its hardware features such as spatial streams, port configuration, and PoE type—without repeating basic scenario details.
+
 {switch_text}
-Be very briefly here: for licensing, recommend the Enterprise tier for APs if it's not a complex RF environment and Enterprise tier for access switches if you don't need Adaptive Policy, Netflow v10, and Encrypted Traffic Analytics.
-Briefly explain why {ap_model} and switch model {switch_model} were chosen, incorporating these details. 
+
+Conclude with a brief summary of the overall hardware selection without being too redudant and why the AP works good with the Switch (if mentioned) selected.
+
 Below is the list of available AP models for {wifi_generation}:
 {dict_str}
-Remember that it's a single message communication, be directly, precise, technical, adding all the relevant informations, and don't say anything about "feel free to ask for further assistance" - it's not possible in this scenario.
-Never mention that an certain AP "can support up to XX users" and it's capacity in Mbps.
-You don't need to explain the scenario again, like "supporting 50 users in a 100 m2 area", the user already know that.
-When speaking about the switches, you can include how many uplinks and what speeds are the ports, also mentioning if it's capable to do L2 or L3.
+
+
 """
+
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt.strip()}],
@@ -492,6 +504,9 @@ def main():
         total_poebudget = 0
         unused_power = 0
         switches_needed = 0
+        switch_type = "N/A"
+        uplink_ports = 0
+        uplink_speed = "N/A"
 
         # If toggled on, compute switch
         if st.session_state.include_switches:
@@ -512,17 +527,25 @@ def main():
                 total_poebudget = switches_needed * switch_info.get("PoE Budget (W)", 0)
                 used_power = results["recommended_aps"] * results["ap_info"].get("PoE", 0)
                 unused_power = total_poebudget - used_power
+                switch_type = switch_info.get("Type", "N/A")
+                uplink_ports = switch_info.get("Uplink Ports", 0)
+                uplink_speed_list = switch_info.get("Uplink Speed (Gbps)", [])
+                uplink_speed = ", ".join(str(s) for s in uplink_speed_list) if uplink_speed_list else "N/A"
 
                 render_switch_details(switch_option, switches_needed)
-
-        # Render BoM, only includes the switch line if switch_option is not None
+            else:
+                switch_option = None
+                switches_needed = 0
+                switch_type = "N/A"
+                uplink_ports = 0
+                uplink_speed = "N/A"
         render_bom(results["recommended_aps"], results["ap_info"], switch_option, switches_needed)
 
         # Add spacing above the AI Explanation expander
         st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
 
         # Build a unique scenario key
-        def get_current_scenario_key(results: dict):
+        def get_current_scenario_key(results: dict) -> str:
             return (
                 f"{results['recommended_aps']}-"
                 f"{results['ap_model']}-"
@@ -554,6 +577,9 @@ def main():
                         ap_model=results["ap_model"],
                         switches_needed=switches_needed,
                         switch_model=switch_model,
+                        switch_type=switch_type,
+                        uplink_ports=uplink_ports,
+                        uplink_speed=uplink_speed,
                         users=results["users"],
                         area=results["area"],
                         effective_users=results["effective_users_per_ap"],
