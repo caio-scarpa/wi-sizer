@@ -68,9 +68,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ------------------------------------------------------------------------------
 # HELPER FUNCTIONS
-# ------------------------------------------------------------------------------
 
 def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: str, ceiling_height: float = 3.0):
     concurrency = 0.7
@@ -101,23 +99,25 @@ def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: 
 
     # Simplified logic for selecting AP model
     if wifi_generation == "Wi-Fi 6":
-        if recommended_aps <= 5 and scenario_type != "auditorium" and effective_users_per_ap <= 20:
+        if recommended_aps <= 5 and scenario_type != "auditorium" and effective_users_per_ap < 25:
             ap_model = "MR28"
-        elif effective_users_per_ap > 30 or (scenario_type == "auditorium" and recommended_aps >= 3) or recommended_aps > 8:
-            ap_model = "MR46" if effective_users_per_ap > 40 else "MR44"
+        elif effective_users_per_ap > 40 or (scenario_type == "auditorium" and recommended_aps >= 3) or recommended_aps > 10:
+            ap_model = "MR46" 
+        elif effective_users_per_ap > 35 or recommended_aps > 8:
+            ap_model = "MR44"
         else:
             ap_model = "MR36"
     elif wifi_generation == "Wi-Fi 6E":
-        if recommended_aps <= 5 and scenario_type != "auditorium" and effective_users_per_ap <= 20:
+        if recommended_aps <= 5 and scenario_type != "auditorium" and effective_users_per_ap < 25:
             ap_model = "CW9162"
-        elif effective_users_per_ap > 30 or (scenario_type == "auditorium" and recommended_aps >= 3) or recommended_aps > 8:
+        elif effective_users_per_ap > 40 or (scenario_type == "auditorium" and recommended_aps >= 3) or recommended_aps > 8:
             ap_model = "CW9166"
         else:
             ap_model = "CW9164"
     elif wifi_generation == "Wi-Fi 7":
-        if recommended_aps <= 5 and scenario_type != "auditorium" and effective_users_per_ap <= 20:
+        if recommended_aps <= 5 and scenario_type != "auditorium" and effective_users_per_ap < 30:
             ap_model = "CW9172"
-        elif effective_users_per_ap > 30 or (scenario_type == "auditorium" and recommended_aps >= 3) or recommended_aps > 8:
+        elif effective_users_per_ap > 40 or (scenario_type == "auditorium" and recommended_aps >= 3) or recommended_aps > 8:
             ap_model = "CW9178"
         else:
             ap_model = "CW9176"
@@ -178,7 +178,7 @@ def format_port_config(switch_info: dict) -> str:
 
 def render_result_card(title: str, content_html: str, bg_color: str = GLOBAL_BG_COLOR):
     st.markdown(f"""
-    <div style="background-color: {bg_color}; padding: 20px; border-radius: 10px; margin-top: 20px;">
+    <div style="background-color: {bg_color}; padding: 20px; border-radius: 10px; margin-top: 20px">
         <h2 style="color: {GLOBAL_TEXT_COLOR}; text-align: center;">{title}</h2>
         {content_html}
     </div>
@@ -286,7 +286,6 @@ def render_switch_details(switch_option, switches_needed):
     render_result_card(f"Recommended Access Switch: <u>{switch_model}</u>", content)
 
 def render_bom(recommended_aps, ap_info, switch_option, switches_needed):
-    # Build the Access Point row (always shown)
     ap_sku = ap_info.get("SKU", "N/A")
     ap_line = f"""
     <tr style="text-align: center;">
@@ -296,7 +295,6 @@ def render_bom(recommended_aps, ap_info, switch_option, switches_needed):
     </tr>
     """
     
-    # Always build the PoE Access Switch row
     # If no switch option is provided, default to 0 quantity and "N/A" for SKU.
     if switch_option is not None:
         family, switch_model, switch_info = switch_option
@@ -361,37 +359,37 @@ def generate_ai_reasoning(
     switch_text = ""
     if switch_model != "N/A":
         switch_text = f"""
-For the access layer, {switches_needed} unit(s) of switch model {switch_model} were selected.
-This switch is {switch_type} and features {uplink_ports} uplink ports at {uplink_speed} Gbps.
-After a 30% growth margin is applied, there remain {unused_high_speed_ports} unused ports and {unused_power} W of PoE budget available.
-Then, explain why {switches_needed} unit(s) of switch model {switch_model} was chosen. Mention whether it is an L2 or L3 switch, detail its uplink port configuration (number and speeds), and specify that after applying a 30% growth margin, there are {unused_high_speed_ports} unused high-speed ports and {unused_power} W of unused PoE budget.
+To add more context, for the access layer, we're suggesting {switches_needed} unit(s) of switch model {switch_model}. This is a {switch_type} capable model and has {uplink_ports} uplink ports at {uplink_speed} Gbps.
+For the use case, it's remaining {unused_high_speed_ports} unused high-speed ports and {unused_power} W of PoE budget left in total.
+
+- Explain why {switches_needed} unit(s) of switch model {switch_model} was chosen. Mention whether it is an L2 or L3 switch, detail its uplink port configuration (number and speeds), and specify that after applying a 30% growth margin, there are {unused_high_speed_ports} unused high-speed ports and {unused_power} W of unused PoE budget to connect other devices of future growth.
 """
 
     prompt = f"""
-You're a Cisco Networking Expert and is helping a partner to size a Meraki wireless network for a traditional office scenario. Provide a concise, one-way technical explanation.
+You're a Cisco Networking Expert and is helping a partner to explain a Meraki wireless network.
+Just for your context, the given scenario is a traditional office environment, we are recommending {recommended_aps} APs model {ap_model} to support {users} users in a {area} m2 total area.
 
-Answer instructions:
-Return your answer as a single, direct technical paragraph without any conversational language or follow-up questions.
-Never mention that an certain AP "can support up to XX users" and it's capacity in Mbps.
-You don't need to explain the scenario again, like "supporting 50 users in a 100 m2 area", the user already knows that.
+Follow these instructions strictly to answer:
+Return your answer as a concise, direct, and technical explanation without any conversational language or follow-up questions (one-way communication).
+Never mention that an certain AP "can support up to XX users" and it's capacity (Mbps).
+You don't need to explain the scenario requirements, like "supporting 50 users in a 100 m2 area", the user already knows that.
+Don't present redundant information.
 
-Just for your context, for a given office scenario, we recommend {recommended_aps} APs of model {ap_model} to support {users} users in a {area} m2 area,  each AP supporting about {effective_users} users. Explain why the AP model {ap_model} was selected, emphasizing its hardware features such as spatial streams, port configuration, and PoE type—without repeating basic scenario details.
+- Explain why the AP model {ap_model} was selected, mention if it's for a low or high user density, emphasize its hardware features such as spatial streams, port configuration, and PoE type — without repeating basic scenario details.
 
 {switch_text}
 
-Conclude with a brief summary of the overall hardware selection without being too redudant and why the AP works good with the Switch (if mentioned) selected.
+- Finish with a very brief and direct conclusion without being redudant and compare the AP model with an upper or down (if the case) AP model.
 
-Below is the list of available AP models for {wifi_generation}:
+For your comparison, below is the list of available AP models:
 {dict_str}
-
-
 """
 
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt.strip()}],
         max_tokens=300,
-        temperature=0.7
+        temperature=0.5
     )
     return response.choices[0].message.content.strip()
 
@@ -412,13 +410,13 @@ def main():
     st.sidebar.image("images/meraki_logo.png", width=150)
     
     st.title("Meraki Wi-Sizer Tool")
-    st.write("Estimate the number of Access Points (APs) and PoE Switches needed for your Meraki wireless network in an indoor office environment.")
+    st.write("Estimate the number of Access Points (APs) and PoE Switches needed for your budgetary Meraki wireless network in an indoor office environment.")
 
     st.sidebar.header("Input Parameters:")
-    users = st.sidebar.number_input("Total Number of Users", min_value=1, step=5, value=50)
-    area = st.sidebar.number_input("Estimated Area (m²)", min_value=20, step=10, value=100)
+    users = st.sidebar.number_input("Total Number of Users", min_value=1, max_value=1000,step=5, value=50)
+    area = st.sidebar.number_input("Estimated Area (m²)", min_value=20, max_value=2000,step=10, value=100)
     ceiling_height = st.sidebar.number_input("Ceiling Height (m)", min_value=2.0, max_value=6.0, step=0.1, value=3.0, format="%.1f")
-    wifi_generation = st.sidebar.selectbox("Select the Wi-Fi Generation:", ["Wi-Fi 6", "Wi-Fi 6E", "Wi-Fi 7"])
+    wifi_generation = st.sidebar.selectbox("Desired Wi-Fi Generation:", ["Wi-Fi 6", "Wi-Fi 6E", "Wi-Fi 7"])
     st.sidebar.checkbox("Include PoE Access Switches", value=True, key="include_switches")
 
     st.subheader("Select the most compatible scenario:")
@@ -608,7 +606,7 @@ def main():
             or (results["scenario_name"] == "Auditorium" and results["recommended_aps"] >= 5)
         ):
             st.markdown(
-                "<div style='text-align: center; color: red; margin-top: 20px;'>"
+                "<div style='text-align: center; color: red; margin-top: 10px;'>"
                 "<h4>🚨 Predictive Site Survey Recommended</h4>"
                 "<p>Given the complexity, a full site survey is strongly recommended. Contact your SE.</p>"
                 "</div>",
@@ -616,9 +614,9 @@ def main():
             )
         else:
             st.markdown(
-                "<div style='text-align: center; color: red; margin-top: 20px;'>"
-                "<h4>⚠️ Preliminary Estimation Disclaimer</h4>"
-                "<p>This tool provides a preliminary estimation and doesn't replace a full site survey.</p>"
+                "<div style='text-align: center; color: red; margin-top: 10px;'>"
+                "<h4>⚠️  Preliminary Estimation Disclaimer</h4>"
+                "<p>This tool provides a preliminary estimation (only recommended for budgetary stages) and doesn't replace a full site survey.</p>"
                 "</div>",
                 unsafe_allow_html=True
             )
@@ -626,8 +624,8 @@ def main():
     st.markdown(
         f"""
         <hr>
-        <div style="text-align: center; font-size: 0.8rem; color: #555; margin-top: 20px; margin-bottom: 40px;">
-            Designed by Caio Scarpa | Last Updated 02/19/2025
+        <div style="text-align: center; font-size: 0.8rem; color: #555; margin-top: 20px; margin-bottom: 30px;">
+            Designed by Caio Scarpa | Last Updated 02/20/2025
         </div>
         """,
         unsafe_allow_html=True
