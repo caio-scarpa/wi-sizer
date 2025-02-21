@@ -9,6 +9,7 @@ AP_MODELS = {
             "PoE Type": "PoE",
             "Power": 15,
             "Capacity": {"2.4GHz": 243.8, "5GHz": 487.5},
+            "Max Users": 25,
             "SKU": "MR28-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -25,6 +26,7 @@ AP_MODELS = {
             "PoE Type": "PoE",
             "Power": 15,
             "Capacity": {"2.4GHz": 243.8, "5GHz": 487.5},
+            "Max Users": 30,
             "SKU": "MR36-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -41,6 +43,7 @@ AP_MODELS = {
             "PoE Type": "PoE+",
             "Power": 30,
             "Capacity": {"2.4GHz": 270.8, "5GHz": 975},
+            "Max Users": 40,
             "SKU": "MR44-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -57,6 +60,7 @@ AP_MODELS = {
             "PoE Type": "PoE+",
             "Power": 30,
             "Capacity": {"2.4GHz": 541.7, "5GHz": 1083.3},
+            "Max Users": 50,
             "SKU": "MR46-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -75,6 +79,7 @@ AP_MODELS = {
             "PoE Type": "PoE+",
             "Power": 30,
             "Capacity": {"2.4GHz": 243.8, "5GHz": 487.5, "6GHz": 487.5},
+            "Max Users": 25,
             "SKU": "CW9162I-MR",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -91,6 +96,7 @@ AP_MODELS = {
             "PoE Type": "PoE+ - USB disabled",
             "Power": 25,
             "Capacity": {"2.4GHz": 243.8, "5GHz": 975, "6GHz": 975},
+            "Max Users": 40,
             "SKU": "CW9164I-MR",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -107,6 +113,7 @@ AP_MODELS = {
             "PoE Type": "PoE+ - USB disabled",
             "Power": 25,
             "Capacity": {"2.4GHz": 541.7, "5GHz": 1083.3, "6GHz": 1083.3},
+            "Max Users": 60,
             "SKU": "CW9166I-MR",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -123,6 +130,7 @@ AP_MODELS = {
             "PoE Type": "PoE+ - USB disabled",
             "Power": 30,
             "Capacity": {"2.4GHz": 541.7, "5GHz": 1083.3, "6GHz": 1083.3},
+            "Max Users": 60,
             "SKU": "MR57-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -141,6 +149,7 @@ AP_MODELS = {
             "PoE Type": "PoE+ - USB disabled",
             "Power": 25.5,
             "Capacity": {"2.4GHz": 243.8, "5GHz": 487.5, "6GHz": 487.5},
+            "Max Users": 30,
             "SKU": "CW9172I-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -157,6 +166,7 @@ AP_MODELS = {
             "PoE Type": "UPoE",
             "Power": 39,
             "Capacity": {"2.4GHz": 541.7, "5GHz": 1083.3, "6GHz": 2268.5},
+            "Max Users": 40,
             "SKU": "CW9176I-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -173,6 +183,7 @@ AP_MODELS = {
             "PoE Type": "UPoE",
             "Power": 47,
             "Capacity": {"2.4GHz": 541.7, "5GHz": 1083.3, "6GHz": 2268.5},
+            "Max Users": 60,
             "SKU": "CW9178I-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
