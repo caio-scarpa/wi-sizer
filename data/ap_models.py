@@ -43,7 +43,7 @@ AP_MODELS = {
             "PoE Type": "PoE+",
             "Power": 30,
             "Capacity": {"2.4GHz": 270.8, "5GHz": 975},
-            "Max Users": 40,
+            "Max Users": 50,
             "SKU": "MR44-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -60,7 +60,7 @@ AP_MODELS = {
             "PoE Type": "PoE+",
             "Power": 30,
             "Capacity": {"2.4GHz": 541.7, "5GHz": 1083.3},
-            "Max Users": 50,
+            "Max Users": 60,
             "SKU": "MR46-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
