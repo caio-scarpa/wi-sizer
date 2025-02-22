@@ -59,6 +59,25 @@ SWITCH_MODELS = {
             "Datasheet": "https://documentation.meraki.com/MS/MS_Overview_and_Specifications/MS130_Datasheet",
             "Installation Guide": "https://documentation.meraki.com/MS/MS_Installation_Guides/MS130_Series_Installation_Guide"
         },
+        "MS130-24P": {
+            "Type": "L2",
+            "Access": [
+                {"Ports": 24, "Speed": [1]}
+            ],
+            "PoE Type": "PoE+",
+            "PoE Budget": 370,
+            "Uplink": [
+                {"Ports": 4, "Speed": [1]}
+            ],
+            "Switching Capacity": 56,
+            "Stacking": "No",
+            "SKU": "MS130-24P-HW",
+            "License": [
+                {"Enterprise": "LIC-MS130-24-xY", "Advanced": "LIC-MS130-24A-xY"}
+            ],
+            "Datasheet": "https://documentation.meraki.com/MS/MS_Overview_and_Specifications/MS130_Datasheet",
+            "Installation Guide": "https://documentation.meraki.com/MS/MS_Installation_Guides/MS130_Series_Installation_Guide"
+        },
         "MS130-24X": {
             "Type": "L2",
             "Access": [
