@@ -497,7 +497,7 @@ def get_current_scenario_key(results: dict) -> str:
 def main():
     st.sidebar.image("images/meraki_logo.png", width=150)
     
-    st.title("Meraki Wi-Sizer Tool")
+    st.title("Meraki Wi-Sizer Tool (beta)")
     st.write("Estimate the number of Access Points (APs) and PoE Switches needed for your budgetary Meraki wireless network in an indoor office environment.")
 
     st.sidebar.header("Input Parameters:")
