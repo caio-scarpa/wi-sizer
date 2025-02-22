@@ -18,7 +18,7 @@ GLOBAL_TEXT_COLOR = "#27AE60"
 
 # Page Layout & Container Width
 st.set_page_config(
-    page_title="Meraki Wi-Sizer Tool",
+    page_title="Meraki Wi-Sizer Tool (beta)",
     page_icon="images/meraki.png",
     layout="wide"
 )
@@ -81,7 +81,7 @@ def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: 
     background_sync = 0.5 # Mbps
 
     total_bandwidth = math.ceil((concurrent_users * throughput_per_user) + (background_devices * background_sync)) # Mbps
-    devices_5ghz = math.ceil(concurrent_users + background_devices)
+    devices_5ghz = math.ceil((concurrent_users + background_devices) * 0.7)
 
     # Get scenario data (which contains coverage_m2)
     scenario_data = get_scenario(scenario_type)
@@ -96,12 +96,15 @@ def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: 
     # 3. Select an AP model from the specified Wi-Fi generation whose "Max Users" >= users_ap
     candidates = []
     for model, info in AP_MODELS[wifi_generation].items():
+        if aps_coverage > 5 and model == "MR28":
+            continue
         max_users = info.get("Max Users", 0)
         if max_users >= users_ap:
             candidates.append((model, info, max_users))
     if not candidates:
         # Fallback: if no candidate meets the threshold, choose the one with the highest max users
-        candidates = [(model, info, info.get("Max Users", 0)) for model, info in AP_MODELS[wifi_generation].items()]
+        candidates = [(model, info, info.get("Max Users", 0)) for model, info in AP_MODELS[wifi_generation].items()
+                      if not (aps_coverage > 5 and model == "MR28")]
         candidates.sort(key=lambda x: x[2], reverse=True)
         selected_candidate = candidates[0]
     else:
@@ -118,11 +121,11 @@ def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: 
     else:
         effective_capacity = capacity_5ghz
 
-    factor = 0.5  # 50% factor to represent real-world data rate
+    factor = 0.35  # factor to represent real-world data rate
     if effective_capacity <= 0:
         aps_capacity = float('inf')
     else:
-        aps_capacity = math.ceil(total_bandwidth / (effective_capacity * factor))
+        aps_capacity = math.ceil((total_bandwidth) / (effective_capacity * factor))
 
     # 5. Density-based AP count based on the selected AP's "Max Users"
     aps_density = math.ceil(devices_5ghz / selected_max_users)
@@ -133,15 +136,28 @@ def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: 
     effective_users_per_ap = math.ceil(devices_5ghz / recommended_aps)
     users_per_ap = math.ceil(users / recommended_aps)
     bandwidth_per_ap = round(total_bandwidth / recommended_aps, 0)
-    wire_speed = math.ceil((total_bandwidth * 2) / recommended_aps)
+    wire_speed = math.ceil((total_bandwidth * 3) / recommended_aps)
 
-    return recommended_aps, selected_model, users_per_ap, effective_users_per_ap, bandwidth_per_ap, selected_info
+    return recommended_aps, selected_model, users_per_ap, wire_speed, selected_info
 
-def get_max_speed_from_ap(ap_info: dict) -> float:
-    """Extract the maximum speed from the AP's Port list."""
+def get_port_speed_above_wire(ap_info: dict, wire_speed: float) -> float:
+    """Extract the AP's port speed that is greater than wire_speed.
+    
+    If none of the available port speeds exceed wire_speed, return the highest available speed.
+    """
     port_list = ap_info.get("Port", [])
-    speeds = [max(item.get("Speed", [1])) for item in port_list if isinstance(item.get("Speed", []), list)]
-    return max(speeds) if speeds else 1
+    speeds = []
+    for item in port_list:
+        spd = item.get("Speed", [])
+        if isinstance(spd, list):
+            speeds.extend(spd)
+    if not speeds:
+        return 1  # Default value if no speed is found
+    sorted_speeds = sorted(set(speeds))
+    for s in sorted_speeds:
+        if s > wire_speed:
+            return s
+    return max(sorted_speeds)
 
 def get_effective_port_count(switch_info: dict, required_speed: float) -> int:
     effective_count = 0
@@ -155,12 +171,19 @@ def calculate_switches(num_aps: int, ap_info: dict):
     ap_power = ap_info.get("Power")
     if not ap_power:
         st.warning("AP model doesn't have a valid Power value.")
-        return (None, None)
+        return (None, None, None, None)
     
-    required_speed = get_max_speed_from_ap(ap_info)
+    # Determine the number of physical ports on the AP (e.g., if there are 2 ports, both must connect)
+    ap_port_count = sum(item.get("Ports", 0) for item in ap_info.get("Port", []))
+    # Total number of AP switch connections required:
+    total_ap_connections = num_aps * ap_port_count
+
+    # Get the required port speed threshold from the AP info.
+    required_speed = get_port_speed_above_wire(ap_info, wire_speed=0)
+    
     best_option = None
     best_switches_needed = None
-    margin = 0.7
+    margin = 0.7  # 70% available after margin
 
     for family, switches in SWITCH_MODELS.items():
         for model, info in switches.items():
@@ -175,12 +198,32 @@ def calculate_switches(num_aps: int, ap_info: dict):
             if available <= 0:
                 continue
 
-            switches_needed = math.ceil(num_aps / available)
+            # Instead of dividing num_aps, use total AP connections.
+            switches_needed = math.ceil(total_ap_connections / available)
             if best_option is None or (best_switches_needed is not None and switches_needed < best_switches_needed):
                 best_option = (family, model, info)
                 best_switches_needed = switches_needed
 
-    return (best_option, best_switches_needed)
+    if best_option is None:
+        return (None, None, None, None)
+    
+    # Recalculate the available ports for the selected candidate.
+    family, model, info = best_option
+    effective_port_count = get_effective_port_count(info, required_speed)
+    available_ports = math.floor(effective_port_count * margin)
+    poe_budget = info.get("PoE Budget", 0)
+    poe_limit = math.floor((poe_budget * margin) / ap_power)
+    available = min(available_ports, poe_limit)
+    
+    # Unused ports are those available on all switches minus the total AP connections used.
+    unused_ports = (available * best_switches_needed) - total_ap_connections
+    
+    # Calculate the total available power and the power actually used.
+    total_power_available = best_switches_needed * (poe_budget * margin)
+    used_power = num_aps * ap_power
+    unused_power = total_power_available - used_power
+
+    return (best_option, best_switches_needed, unused_ports, unused_power)
 
 def format_port_config(switch_info: dict) -> str:
     group_strings = []
@@ -235,10 +278,6 @@ def render_ap_details(ap_info: dict, ap_model: str):
         <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">SKU:</td>
         <td style="width: 70%; padding: 10px; text-align: left;">{ap_info.get('SKU')}</td>
       </tr>
-      <tr>
-        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">Max Users:</td>
-        <td style="width: 70%; padding: 10px; text-align: left;">{ap_info.get('Max Users', 'N/A')}</td>
-      </tr>
     </table>
     <div style="text-align: center; margin-top: 20px;">
         <a href="{ap_info.get('Datasheet')}" target="_blank" style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-right: 10px;">Datasheet</a>
@@ -275,12 +314,12 @@ def render_switch_details(switch_option, switches_needed):
         <td style="width: 70%; padding: 10px; text-align: left;">{uplink_ports} x {uplink_speed} Gbps</td>
       </tr>
       <tr>
-        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">PoE Budget:</td>
-        <td style="width: 70%; padding: 10px; text-align: left;">{switch_info.get('PoE Budget', 0)} W</td>
-      </tr>
-      <tr>
         <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">PoE Type:</td>
         <td style="width: 70%; padding: 10px; text-align: left;">{switch_info.get('PoE Type')}</td>
+      </tr>
+      <tr>
+        <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">PoE Budget:</td>
+        <td style="width: 70%; padding: 10px; text-align: left;">{switch_info.get('PoE Budget', 0)} W</td>
       </tr>
       <tr>
         <td style="font-weight: bold; width: 30%; padding: 10px; text-align: left;">SKU:</td>
@@ -309,6 +348,7 @@ def render_switch_details(switch_option, switches_needed):
     render_result_card(f"Recommended Access Switch: <u>{switch_model}</u>", content)
 
 def render_bom(recommended_aps, ap_info, switch_option, switches_needed):
+    # AP basic line
     ap_sku = ap_info.get("SKU", "N/A")
     ap_line = f"""
     <tr style="text-align: center;">
@@ -317,22 +357,56 @@ def render_bom(recommended_aps, ap_info, switch_option, switches_needed):
         <td style="padding: 10px; border-left: 1px solid #ccc;">{ap_sku}</td>
     </tr>
     """
+    # AP License row
+    ap_license_list = ap_info.get("License", [])
+    if ap_license_list:
+        # Assuming one dictionary entry for license options.
+        ap_license_options = ap_license_list[0]
+        ap_license_str = f"{ap_license_options.get('Enterprise','')}/ {ap_license_options.get('Advanced','')}"
+        ap_license_line = f"""
+        <tr style="text-align: center;">
+            <td style="padding: 10px;">AP License</td>
+            <td style="padding: 10px; border-left: 1px solid #ccc;">{recommended_aps}</td>
+            <td style="padding: 10px; border-left: 1px solid #ccc;">{ap_license_str}</td>
+        </tr>
+        """
+    else:
+        ap_license_line = ""
+
+    # Switch lines
     if switch_option is not None:
         family, switch_model, switch_info = switch_option
         switch_sku = switch_info.get("SKU", "N/A")
-        switch_quantity = switches_needed if switches_needed is not None else 0
+        switch_line = f"""
+        <tr style="text-align: center;">
+            <td style="padding: 10px;">PoE Access Switch</td>
+            <td style="padding: 10px; border-left: 1px solid #ccc;">{switches_needed}</td>
+            <td style="padding: 10px; border-left: 1px solid #ccc;">{switch_sku}</td>
+        </tr>
+        """
+        switch_license_list = switch_info.get("License", [])
+        if switch_license_list:
+            switch_license_options = switch_license_list[0]
+            switch_license_str = f"{switch_license_options.get('Enterprise','')}/ {switch_license_options.get('Advanced','')}"
+            switch_license_line = f"""
+            <tr style="text-align: center;">
+                <td style="padding: 10px;">Switch License</td>
+                <td style="padding: 10px; border-left: 1px solid #ccc;">{switches_needed}</td>
+                <td style="padding: 10px; border-left: 1px solid #ccc;">{switch_license_str}</td>
+            </tr>
+            """
+        else:
+            switch_license_line = ""
     else:
-        switch_model = "N/A"
-        switch_sku = "N/A"
-        switch_quantity = 0
+        switch_line = f"""
+        <tr style="text-align: center;">
+            <td style="padding: 10px;">PoE Access Switch</td>
+            <td style="padding: 10px; border-left: 1px solid #ccc;">0</td>
+            <td style="padding: 10px; border-left: 1px solid #ccc;">N/A</td>
+        </tr>
+        """
+        switch_license_line = ""
 
-    switch_line = f"""
-    <tr style="text-align: center;">
-        <td style="padding: 10px;">PoE Access Switch</td>
-        <td style="padding: 10px; border-left: 1px solid #ccc;">{switch_quantity}</td>
-        <td style="padding: 10px; border-left: 1px solid #ccc;">{switch_sku}</td>
-    </tr>
-    """
     bom_html = f"""
     <table style="width: 100%; border-collapse: collapse;">
       <tr style="text-align: center;">
@@ -341,14 +415,18 @@ def render_bom(recommended_aps, ap_info, switch_option, switches_needed):
         <th style="padding: 10px; border-left: 1px solid #ccc;">Part Number</th>
       </tr>
       {ap_line}
+      {ap_license_line}
       {switch_line}
+      {switch_license_line}
     </table>
     <div style="text-align: center; margin-top: 20px;">
-      <a href="https://www.merakisizing.com/" target="_blank"
-         style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px;
-                text-decoration: none; border-radius: 5px;">
-         Licensing Info
-      </a>
+      <p style="font-size: 0.9rem; color: #555;">
+         Choose the most appropriate license solution (x = 1, 3, 5, 7, 10 years).
+      </p>
+    </div>
+    <div style="text-align: center; margin-top: 20px;">
+        <a href="https://documentation.meraki.com/General_Administration/Licensing/Meraki_MR_License_Guide" target="_blank" style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-right: 10px;">MR License Guide</a>
+        <a href="https://documentation.meraki.com/General_Administration/Licensing/Subscription_-_MS_Licensing" target="_blank" style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">MS License Guide</a>
     </div>
     """
     render_result_card("Bill of Materials (BoM)", bom_html)
@@ -366,7 +444,7 @@ def generate_ai_reasoning(
     effective_users: int,
     recommended_aps: int,
     total_high_speed_ports: int,
-    unused_high_speed_ports: int,
+    unused_ports: int,
     total_poebudget: int,
     unused_power: int
 ) -> str:
@@ -376,7 +454,7 @@ def generate_ai_reasoning(
     if switch_model != "N/A":
         switch_text = f"""
 To add more context, for the access layer, we're suggesting {switches_needed} unit(s) of switch model {switch_model}. This is a {switch_type} capable model and has {uplink_ports} uplink ports at {uplink_speed} Gbps.
-For the use case, it leaves {unused_high_speed_ports} unused high-speed ports and {unused_power} W of unused PoE budget for future expansion.
+For the use case, it leaves {unused_ports} unused high-speed ports and {unused_power} W of unused PoE budget for future expansion.
 
 - Explain why {switches_needed} unit(s) of switch model {switch_model} was chosen.
 """
@@ -589,9 +667,9 @@ def main():
                 )
 
         if (
-            results["area"] > 1200
+            results["area"] > 1500
             or ceiling_height > 4.5
-            or results["users"] > 500
+            or results["users"] > 400
             or results["recommended_aps"] > 12
             or (results["scenario_name"] == "Auditorium" and results["recommended_aps"] >= 5)
         ):
