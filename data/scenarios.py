@@ -11,26 +11,26 @@ class Scenario:
 SCENARIOS: Dict[str, Scenario] = {
     "scenario_1": Scenario(
         name="Office 1",
-        description="Open office with minimal walls",
-        coverage_m2=250,
+        description="Open plan office",
+        coverage_m2=240,
         image_path="images/cenario_1.png"
     ),
     "scenario_2": Scenario(
         name="Office 2",
-        description="Open office with some walls",
-        coverage_m2=200,
+        description=" Minimal walls",
+        coverage_m2=180,
         image_path="images/cenario_2.png"
     ),
     "scenario_3": Scenario(
         name="Office 3",
-        description="Office with several rooms",
-        coverage_m2=150,
+        description=" Several rooms",
+        coverage_m2=120,
         image_path="images/cenario_3.png"
     ),
     "auditorium": Scenario(
         name="Auditorium",
         description="High-density room",
-        coverage_m2=200,
+        coverage_m2=240,
         image_path="images/auditorio.png"
     )
 }
