@@ -9,7 +9,7 @@ AP_MODELS = {
             "PoE Type": "PoE",
             "Power": 15,
             "Capacity": {"2.4GHz": 243.8, "5GHz": 487.5},
-            "Max Users": 25,
+            "Max Users": 30,
             "SKU": "MR28-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -26,7 +26,7 @@ AP_MODELS = {
             "PoE Type": "PoE",
             "Power": 15,
             "Capacity": {"2.4GHz": 243.8, "5GHz": 487.5},
-            "Max Users": 30,
+            "Max Users": 35,
             "SKU": "MR36-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -43,7 +43,7 @@ AP_MODELS = {
             "PoE Type": "PoE+",
             "Power": 30,
             "Capacity": {"2.4GHz": 270.8, "5GHz": 975},
-            "Max Users": 50,
+            "Max Users": 45,
             "SKU": "MR44-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -55,7 +55,7 @@ AP_MODELS = {
             "Wi-Fi Standard": "802.11ax (Wi-Fi 6)",
             "Spatial Streams": "4 x 4 : 4",
             "Port": [
-                {"Ports": 1, "Speed": [2.5]}
+                {"Ports": 1, "Speed": [1, 2.5]}
             ],
             "PoE Type": "PoE+",
             "Power": 30,
@@ -79,7 +79,7 @@ AP_MODELS = {
             "PoE Type": "PoE+",
             "Power": 30,
             "Capacity": {"2.4GHz": 243.8, "5GHz": 487.5, "6GHz": 487.5},
-            "Max Users": 25,
+            "Max Users": 30,
             "SKU": "CW9162I-MR",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -96,7 +96,7 @@ AP_MODELS = {
             "PoE Type": "PoE+ - USB disabled",
             "Power": 25,
             "Capacity": {"2.4GHz": 243.8, "5GHz": 975, "6GHz": 975},
-            "Max Users": 40,
+            "Max Users": 45,
             "SKU": "CW9164I-MR",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -166,7 +166,7 @@ AP_MODELS = {
             "PoE Type": "UPoE",
             "Power": 39,
             "Capacity": {"2.4GHz": 541.7, "5GHz": 1083.3, "6GHz": 2268.5},
-            "Max Users": 40,
+            "Max Users": 45,
             "SKU": "CW9176I-HW",
             "License": [
                 {"Enterprise": "LIC-ENT-xYR", "Advanced": "LIC-MR-ADV-xYR"}
@@ -178,7 +178,7 @@ AP_MODELS = {
             "Wi-Fi Standard": "802.11be (Wi-Fi 7)",
             "Spatial Streams": "4 x 4 : 4",
             "Port": [
-                {"Ports": 2, "Speed": [1, 2.5, 5]}
+                {"Ports": 2, "Speed": [1, 2.5, 5, 10]}
             ],
             "PoE Type": "UPoE",
             "Power": 47,
