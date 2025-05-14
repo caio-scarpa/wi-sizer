@@ -9,6 +9,8 @@ import logging
 from typing import Optional, List
 from openai import OpenAI
 from PIL import Image
+from dotenv import load_dotenv
+import streamlit.components.v1 as components
 
 # Import scenarios, APs, and switches data modules
 from data.scenarios import SCENARIOS, get_scenario
@@ -16,7 +18,8 @@ from data.ap_models import AP_MODELS
 from data.switch_models import SWITCH_MODELS
 
 # API Key for OpenAI
-OPENAI_API_KEY = "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"
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     st.error("OpenAI integration problem.")
     st.stop()
@@ -36,17 +39,25 @@ st.set_page_config(
 )
 
 # Google Analytics header
-st.markdown("""
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-EVS56VM3CC"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+GA_ID = "G-0YY1B8XMW9"
 
-      gtag('config', 'G-EVS56VM3CC');
-    </script>
-""", unsafe_allow_html=True)
+components.html(f"""
+<script async src="https://www.googletagmanager.com/gtag/js?id={GA_ID}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){{dataLayer.push(arguments);}}
+
+  gtag('js', new Date());
+  gtag('config', '{GA_ID}', {{ send_page_view: false }});
+
+  /* dispara manualmente */
+  gtag('event', 'page_view', {{
+      page_title: document.title,
+      page_location: window.location.href,
+      page_path: window.location.pathname
+  }});
+</script>
+""", height=0)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -756,7 +767,7 @@ def main():
     st.markdown(
         f"""
         <div style="text-align: center; font-size: 0.8rem; color: #555; margin-top: 20px; margin-bottom: 30px;">
-            Designed by Caio Scarpa | Last Updated 03/05/2025
+            Designed by Caio Scarpa | Last Updated 05/09/2025
         </div>
         """,
         unsafe_allow_html=True
