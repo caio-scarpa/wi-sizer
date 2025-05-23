@@ -311,19 +311,13 @@ f"""<table style="width: 100%; border-collapse: collapse;">
      target="_blank"
      style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px;
             text-decoration: none; border-radius: 5px; margin-right: 10px;">
-    MR License Guide
+    AP License Guide
   </a>
   <a href="https://documentation.meraki.com/General_Administration/Licensing/Subscription_-_MS_Licensing"
      target="_blank"
      style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px;
             text-decoration: none; border-radius: 5px; margin-right: 10px;">
-    MS License Guide
-  </a>
-    <a href="https://pas.cisco.com/pdtcnc/#/"
-     target="_blank"
-     style="background-color: {GLOBAL_TEXT_COLOR}; color: white; padding: 10px 20px;
-            text-decoration: none; border-radius: 5px;">
-    Check Country Availability
+    Switch License Guide
   </a>
 </div>"""
     )
@@ -707,7 +701,7 @@ def main():
 
         with st.expander("AI Reasoning"):
             if "ai_reasoning" not in st.session_state:
-                if st.button("Generate Explanation", key="ai_reasoning_btn"):
+                if st.button("Generate AI Explanation", key="ai_reasoning_btn"):
                     reasoning_text = generate_ai_reasoning(
                         wifi_generation=results["wifi_generation"],
                         ap_model=results["ap_model"],
@@ -767,7 +761,7 @@ def main():
     st.markdown(
         f"""
         <div style="text-align: center; font-size: 0.8rem; color: #555; margin-top: 20px; margin-bottom: 30px;">
-            Designed by Caio Scarpa | Last Updated 05/09/2025
+            Designed by Caio Scarpa | Last Updated 05/23/2025
         </div>
         """,
         unsafe_allow_html=True
