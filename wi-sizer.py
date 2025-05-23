@@ -10,6 +10,7 @@ from typing import Optional, List
 from openai import OpenAI
 from PIL import Image
 from dotenv import load_dotenv
+load_dotenv(override=True)
 import streamlit.components.v1 as components
 
 # Import scenarios, APs, and switches data modules
