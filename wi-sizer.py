@@ -39,27 +39,6 @@ st.set_page_config(
     }
 )
 
-# Google Analytics header
-GA_ID = "G-0YY1B8XMW9"
-
-components.html(f"""
-<script async src="https://www.googletagmanager.com/gtag/js?id={GA_ID}"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){{dataLayer.push(arguments);}}
-
-  gtag('js', new Date());
-  gtag('config', '{GA_ID}', {{ send_page_view: false }});
-
-  /* dispara manualmente */
-  gtag('event', 'page_view', {{
-      page_title: document.title,
-      page_location: window.location.href,
-      page_path: window.location.pathname
-  }});
-</script>
-""", height=0)
-
 logging.basicConfig(level=logging.INFO)
 
 def log_calculation(result: dict, ai_explanation: Optional[str] = None, switches_needed: Optional[int] = None,
@@ -328,8 +307,7 @@ f"""<table style="width: 100%; border-collapse: collapse;">
 def calculate_aps(area: float, users: int, scenario_type: str, wifi_generation: str, ceiling_height: float = 3.0):
     concurrency = 0.7  # 70% occupancy
     concurrent_users = users * concurrency
-    background_per_user = concurrent_users * 2
-    background_devices = 0 if scenario_type == "auditorium" else background_per_user
+    background_devices = concurrent_users * 2
     throughput_per_user = 5  # Mbps
     background_sync = 0.5  # Mbps
 
@@ -741,7 +719,6 @@ def main():
             or ceiling_m > 4.5
             or results["users"] > 400
             or results["recommended_aps"] > 12
-            or (results["scenario_name"] == "Auditorium" and results["recommended_aps"] >= 5)
         ):
             st.markdown(
                 "<div style='text-align: center; color: red'>"
