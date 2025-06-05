@@ -739,7 +739,7 @@ def main():
     st.markdown(
         f"""
         <div style="text-align: center; font-size: 0.8rem; color: #555; margin-top: 20px; margin-bottom: 30px;">
-            Designed by Caio Scarpa | Last Updated 05/23/2025
+            Designed by Caio Scarpa | Last Updated 06/05/2025
         </div>
         """,
         unsafe_allow_html=True
