@@ -26,12 +26,6 @@ SCENARIOS: Dict[str, Scenario] = {
         description=" Several rooms",
         coverage_m2=120,
         image_path="images/cenario_3.png"
-    ),
-    "auditorium": Scenario(
-        name="Auditorium",
-        description="High-density room",
-        coverage_m2=240,
-        image_path="images/auditorio.png"
     )
 }
 
